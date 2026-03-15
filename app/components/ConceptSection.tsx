@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Image as ImageIcon } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Titillium_Web, Outfit } from 'next/font/google';
 import Image from 'next/image';
 
@@ -22,7 +22,7 @@ function ConceptSection() {
           {/* Text Content */}
           <div className="flex-1 space-y-10 w-full">
             <h2 className={`text-4xl md:text-5xl lg:text-6xl font-bold text-black leading-tight ${titillium.className}`}>
-              Most students don't fail because they are <span className="text-green-500">lazy</span>.
+              Most students don&apos;t fail because they are <span className="text-green-500">lazy</span>.
             </h2>
 
             <div className={`space-y-6 relative ${outfit.className}`}>
@@ -45,13 +45,13 @@ function ConceptSection() {
                   <div className="w-8 h-8 rounded-full bg-white/80 shadow-sm flex items-center justify-center flex-shrink-0">
                     <X className="w-4 h-4 text-red-500/80" />
                   </div>
-                  <span className="text-lg text-black/80 font-medium tracking-wide">They don't revise consistently</span>
+                  <span className="text-lg text-black/80 font-medium tracking-wide">They don&apos;t revise consistently</span>
                 </li>
                 <li className="flex items-center gap-4 p-5 rounded-2xl border border-white/60 bg-white/40 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.04)] transition-all hover:bg-white/60">
                   <div className="w-8 h-8 rounded-full bg-white/80 shadow-sm flex items-center justify-center flex-shrink-0">
                     <X className="w-4 h-4 text-red-500/80" />
                   </div>
-                  <span className="text-lg text-black/80 font-medium tracking-wide">They don't realize they are struggling until exams</span>
+                  <span className="text-lg text-black/80 font-medium tracking-wide">They don&apos;t realize they are struggling until exams</span>
                 </li>
               </ul>
             </div>

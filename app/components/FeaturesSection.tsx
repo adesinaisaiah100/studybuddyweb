@@ -80,13 +80,13 @@ export default function FeaturesSection() {
             Everything you need to <span className="text-green-500"><i>master</i></span> your courses.
           </h2>
           <p className="text-xl text-gray-600">
-            StudyBuddy doesn't just store your notes. It actively helps you understand them, remember them, and ace your exams.
+            StudyBuddy doesn&apos;t just store your notes. It actively helps you understand them, remember them, and ace your exams.
           </p>
         </div>
 
         {/* Bento Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 auto-rows-[minmax(300px,_auto)]">
-          {features.map((feature, index) => (
+          {features.map((feature) => (
             <div 
               key={feature.id}
               className={`group flex flex-col rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden relative isolate ${feature.span}`}

@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react";
 import Image from "next/image";
-import { useScroll, useTransform, motion } from "framer-motion";
+import { useScroll, useTransform, motion, MotionValue } from "framer-motion";
 import { Titillium_Web, Outfit } from "next/font/google";
 
 const titillium = Titillium_Web({
@@ -104,47 +104,15 @@ export default function HowItWorksSection() {
               </div>
 
               <div className="relative w-full h-[250px] md:h-[300px] flex items-center">
-                {steps.map((step, index) => {
-                  const start = index * 0.333;
-                  const end = start + 0.333;
-                  const isLast = index === steps.length - 1;
-                  
-                  // Snap opacity: 0 before start, 1 during active, 0 immediately after end
-                  const opacity = useTransform(
-                    scrollYProgress,
-                    [start - 0.02, start, end - 0.03, end],
-                    [0, 1, 1, isLast ? 1 : 0]
-                  );
-
-                  // Snap vertical position closely with opacity
-                  const y = useTransform(
-                    scrollYProgress,
-                    [start - 0.02, start, end - 0.03, end],
-                    [15, 0, 0, isLast ? 0 : -15]
-                  );
-
-                  return (
-                    <motion.div 
-                      key={step.id}
-                      style={{ opacity, y }}
-                      className="flex gap-4 md:gap-6 items-start absolute top-1/2 -translate-y-1/2 left-0 w-full md:pl-20 pointer-events-none"
-                    >
-                      {/* Number Circle */}
-                      <div className="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-full bg-green-50 border-2 border-green-100 shadow-sm md:flex items-center justify-center text-lg md:text-xl font-bold text-green-600 hidden">
-                        {step.id}
-                      </div>
-                      {/* Mobile Number Indicator */}
-                      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 text-green-700 md:hidden flex items-center justify-center font-bold text-base mt-1">
-                        {step.id}
-                      </div>
-                      
-                      <div>
-                        <h3 className="text-xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-4">{step.title}</h3>
-                        <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-md">{step.description}</p>
-                      </div>
-                    </motion.div>
-                  );
-                })}
+                {steps.map((step, index) => (
+                  <StepItem 
+                    key={step.id}
+                    step={step}
+                    index={index}
+                    totalSteps={steps.length}
+                    scrollYProgress={scrollYProgress}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -187,5 +155,47 @@ export default function HowItWorksSection() {
         </div>
       </section>
     </>
+  );
+}
+
+// Extracted component to safely use hooks inside the map loop
+function StepItem({ step, index, totalSteps, scrollYProgress }: { 
+  step: { id: number; title: string; description: string; image: string; }; 
+  index: number; 
+  totalSteps: number; 
+  scrollYProgress: MotionValue<number>;
+}) {
+  const start = index * 0.333;
+  const end = start + 0.333;
+  const isLast = index === totalSteps - 1;
+  
+  const opacity = useTransform(
+    scrollYProgress,
+    [start - 0.02, start, end - 0.03, end],
+    [0, 1, 1, isLast ? 1 : 0]
+  );
+
+  const y = useTransform(
+    scrollYProgress,
+    [start - 0.02, start, end - 0.03, end],
+    [15, 0, 0, isLast ? 0 : -15]
+  );
+
+  return (
+    <motion.div 
+      style={{ opacity, y }}
+      className="flex gap-4 md:gap-6 items-start absolute top-1/2 -translate-y-1/2 left-0 w-full md:pl-20 pointer-events-none"
+    >
+      <div className="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-full bg-green-50 border-2 border-green-100 shadow-sm md:flex items-center justify-center text-lg md:text-xl font-bold text-green-600 hidden">
+        {step.id}
+      </div>
+      <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 text-green-700 md:hidden flex items-center justify-center font-bold text-base mt-1">
+        {step.id}
+      </div>
+      <div>
+        <h3 className="text-xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-4">{step.title}</h3>
+        <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-md">{step.description}</p>
+      </div>
+    </motion.div>
   );
 }

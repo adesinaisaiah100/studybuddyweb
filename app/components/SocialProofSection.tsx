@@ -93,7 +93,7 @@ export default function SocialProofSection() {
                     }
                  `}>
                     <p className="text-lg md:text-xl font-medium leading-relaxed">
-                      "{t.text}"
+                      &quot;{t.text}&quot;
                     </p>
                  </div>
 
