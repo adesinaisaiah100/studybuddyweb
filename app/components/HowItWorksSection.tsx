@@ -20,25 +20,25 @@ const steps = [
     id: 1,
     title: "Create your courses",
     description: "Start by organizing your semester. Add all your current classes so StudyBuddy knows what you're focusing on.",
-    image: "/course_hw.png", 
+    image: "/organizing.jpg", 
   },
   {
     id: 2,
     title: "Upload notes and study materials",
     description: "Feed StudyBuddy your syllabus, slides, and class notes to build your personal knowledge base.",
-    image: "/upload_hw.png", 
+    image: "/uploadcourse.jpg", 
   },
   {
     id: 3,
     title: "Study topics and ask questions",
     description: "Interact with your materials. Get context-aware answers that actually relate to your syllabus.",
-    image: "/questions_hw.png", 
+    image: "/readandask.jpg", 
   },
   {
     id: 4,
     title: "Track your progress across the semester",
     description: "Watch your understanding grow. Identify exactly which concepts need more review before the big exam.",
-    image: "/progress tracking.jpg", // Keeping progress tracking photo for the 4th step
+    image: "/progress.png", // Keeping progress tracking photo for the 4th step
   },
 ];
 
