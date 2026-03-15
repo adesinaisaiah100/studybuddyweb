@@ -3,15 +3,15 @@ import { X, Check, Image as ImageIcon } from 'lucide-react';
 
 function ConceptSection() {
   return (
-    <section className="w-full py-24 px-6 bg-white overflow-hidden">
-      <div className="max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-        
+    <section className="w-full py-24 px-3 bg-white overflow-hidden">
+      <div className="w-full mx-auto flex flex-col lg:flex-row items-center gap-16 lg:gap-4">
+
         {/* Text Content */}
         <div className="flex-1 space-y-10 w-full">
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
             Most students don't fail because they are <span className="text-red-500">lazy</span>.
           </h2>
-          
+
           <div className="space-y-6">
             <p className="text-2xl font-semibold text-gray-800">
               They fail because:
