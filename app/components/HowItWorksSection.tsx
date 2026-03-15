@@ -69,6 +69,7 @@ export default function HowItWorksSection() {
   return (
     <>
       <section 
+        id="how-it-works"
         ref={containerRef} 
         // The height determines how long the user has to scroll. 
         // 300vh means it takes 3 viewport heights to transition between the 4 steps completely.

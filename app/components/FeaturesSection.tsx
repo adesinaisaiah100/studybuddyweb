@@ -63,7 +63,7 @@ const features = [
 
 export default function FeaturesSection() {
   return (
-    <section className="w-full py-24 px-4 bg-gray-50 overflow-hidden relative">
+    <section id="features" className="w-full py-24 px-4 bg-gray-50 overflow-hidden relative">
       
       {/* Background decorations */}
       <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-green-100/40 rounded-full blur-[100px] -z-10 transform translate-x-1/2 -translate-y-1/2"></div>
