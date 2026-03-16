@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import React from 'react'
 import { Titillium_Web } from 'next/font/google'
+import AuthButton from './AuthButton'
 
 const titillium = Titillium_Web({
   subsets: ['latin'],
@@ -40,9 +41,9 @@ function Navbar() {
           <a className="hidden sm:inline text-sm font-medium text-neutral-600/80 hover:text-neutral-900" href="#login">
             Login
           </a>
-          <button className="rounded-full border border-neutral-300 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors duration-200">
+          <AuthButton className="rounded-full border border-neutral-300 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors duration-200 cursor-pointer">
             Start for Free
-          </button>
+          </AuthButton>
         </div>
       </div>
     </header>

@@ -3,6 +3,7 @@ import Navbar from "./Navbar";
 import Image from "next/image";
 import { ArrowRight } from 'lucide-react';
 import ReviewsBadge from "./ReviewsBadge";
+import AuthButton from "./AuthButton";
 
 function HeroSection() {
   return (
@@ -40,7 +41,7 @@ function HeroSection() {
               </p>
 
               <div className="flex justify-center lg:justify-start">
-                <button className='py-3 sm:py-4 px-4 sm:px-5 rounded-2xl border border-gray-400 flex text-base sm:text-lg backdrop-blur text-white gap-3 bg-green-400 items-center'>Start Studying Smarter <span><ArrowRight /></span></button>
+                <AuthButton className='py-3 sm:py-4 px-4 sm:px-5 rounded-2xl border border-gray-400 flex text-base sm:text-lg backdrop-blur text-white gap-3 bg-green-400 items-center cursor-pointer hover:bg-green-500 transition-colors'>Start Studying Smarter <span><ArrowRight /></span></AuthButton>
               </div>
 
               <div className="mt-6 sm:mt-8 flex justify-center lg:justify-start">
