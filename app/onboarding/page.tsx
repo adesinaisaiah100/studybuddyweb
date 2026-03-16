@@ -81,15 +81,14 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-white flex items-center justify-center px-4 sm:px-6 lg:px-12 py-8 sm:py-12 overflow-hidden relative">
-      <div className="relative z-10 w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+      <div className="relative z-10 w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
         
         {/* Left: Video */}
         <div className="w-full flex items-center justify-center">
-          <div className="w-full max-w-md lg:max-w-none rounded-3xl overflow-hidden shadow-lg border border-gray-100">
+          <div className="w-full max-w-md lg:max-w-none rounded-3xl overflow-hidden ">
             <video
               src="/Conversation.mp4"
               autoPlay
-              loop
               muted
               playsInline
               className="w-full h-auto object-cover"
