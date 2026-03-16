@@ -40,19 +40,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // 2. If text hasn't been extracted yet, send file to Docling
+    // 2. If text hasn't been extracted yet, parse locally
     let extractedText = doc.extracted_text;
 
     if (!extractedText) {
-      const doclingUrl = process.env.DOCLING_SERVICE_URL;
-
-      if (!doclingUrl) {
-        return NextResponse.json(
-          { error: "Docling service URL not configured" },
-          { status: 500 }
-        );
-      }
-
       // Download the file from Supabase Storage
       const filePath = doc.file_url.split("/timetables/")[1];
 
@@ -74,26 +65,39 @@ export async function POST(request: Request) {
         );
       }
 
-      // Send to Docling for parsing
-      const formData = new FormData();
-      const fileName = `document.${doc.file_type}`;
-      formData.append("file", fileData, fileName);
+      // Parse locally based on file type
+      try {
+        const arrayBuffer = await fileData.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-      const parseResponse = await fetch(`${doclingUrl}/parse`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!parseResponse.ok) {
-        const parseError = await parseResponse.text();
+        if (doc.file_type === "pdf") {
+          const pdf = (await import("pdf-parse")).default;
+          const data = await pdf(buffer);
+          extractedText = data.text;
+        } else if (doc.file_type === "docx") {
+          const mammoth = await import("mammoth");
+          const result = await mammoth.extractRawText({ buffer });
+          extractedText = result.value;
+        } else {
+          return NextResponse.json(
+            { error: `Unsupported file type for local parsing: ${doc.file_type}` },
+            { status: 400 }
+          );
+        }
+      } catch (parseError) {
+        console.error("Local parsing error:", parseError);
         return NextResponse.json(
-          { error: `Docling parsing failed: ${parseError}` },
+          { error: `Failed to parse document locally: ${parseError instanceof Error ? parseError.message : String(parseError)}` },
           { status: 500 }
         );
       }
 
-      const parseResult = await parseResponse.json();
-      extractedText = parseResult.extracted_text;
+      if (!extractedText) {
+        return NextResponse.json(
+          { error: "Extracted text is empty" },
+          { status: 500 }
+        );
+      }
 
       // Save the extracted text back to raw_documents
       await supabase
