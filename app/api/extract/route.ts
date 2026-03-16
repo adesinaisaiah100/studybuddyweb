@@ -109,6 +109,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Send extracted text to AI for course extraction
+    console.log("EXTRACTED TEXT FOR AI:", extractedText);
     const aiResult = await extractCourses(extractedText);
 
     // 4. Save courses to database

@@ -3,37 +3,34 @@ import { z } from "zod";
 
 // Schema for AI-structured course output
 const CourseScheduleSchema = z.object({
-  day: z.string().describe("Day of the week, e.g. 'Monday'"),
-  time: z.string().describe("Time slot, e.g. '10:00 - 12:00'"),
-  venue: z.string().nullable().describe("Venue or room, e.g. 'LT1'. Null if not specified."),
+  day: z.string().describe("REQUIRED: Day of the week (e.g. Monday, Tuesday)"),
+  time: z.string().describe("REQUIRED: Time duration (e.g. 08:00 - 10:00)"),
+  venue: z.string().nullable().describe("EXTRACTED venue or null if not found"),
 });
 
 const CourseSchema = z.object({
-  code: z.string().describe("Course code, e.g. 'CSC301'"),
-  title: z.string().describe("Course title, e.g. 'Operating Systems'"),
-  schedule: z.array(CourseScheduleSchema).describe("All weekly time slots for this course"),
+  code: z.string().describe("EXTRACTED Course code or unique identifier (e.g. CSC301)"),
+  title: z.string().describe("EXTRACTED Full course name/title"),
+  schedule: z.array(CourseScheduleSchema).describe("List of all extracted meeting times"),
 });
 
 const CoursesOutputSchema = z.object({
-  courses: z.array(CourseSchema).describe("Array of extracted courses"),
+  courses: z.array(CourseSchema).describe("ONLY courses found in the provided text"),
 });
 
 export type ExtractedCourse = z.infer<typeof CourseSchema>;
 export type CoursesOutput = z.infer<typeof CoursesOutputSchema>;
 
-const SYSTEM_PROMPT = `You are an expert at extracting course/timetable data from university documents.
+const SYSTEM_PROMPT = `You are a strict data extractor. Your task is to extract university course data from the provided text.
 
-Given the text of a student's timetable or course schedule, extract ALL courses with their details.
-
-Rules:
-- Extract the course code (e.g., CSC301, MAT201), title, and all weekly time slots.
-- A single course may appear multiple times in a week (e.g., Monday 10-12 AND Wednesday 10-12). Group these under the same course with multiple schedule entries.
-- If a venue/room/hall is mentioned, include it. Otherwise set venue to null.
-- Use the full day name (Monday, Tuesday, etc.), not abbreviations.
-- Format time slots as "HH:MM - HH:MM" in 24-hour format when possible.
-- If the document uses AM/PM, convert to 24-hour format.
-- Do not invent courses that are not in the document.
-- If you cannot determine the course code, use the course title as the code.`;
+RULES:
+1. ONLY extract data that is EXPLICITLY present in the user text.
+2. DO NOT use placeholder data (like CSC301 or Operating Systems) unless it is actually in the text.
+3. If no courses are found, return an empty array: {"courses": []}.
+4. Group multiple time slots for the same course together.
+5. Convert days to full names (e.g., "Mon" -> "Monday").
+6. Convert times to 24h format "HH:MM - HH:MM" if possible.
+7. Be precise. Accuracy is critical.`;
 
 export async function extractCourses(
   extractedText: string

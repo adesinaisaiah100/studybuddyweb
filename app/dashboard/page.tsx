@@ -110,11 +110,9 @@ export default function DashboardPage() {
     return "Good evening";
   };
 
-  const firstName = profile?.full_name?.split(" ")[0] || "Student";
-
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50/30 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
           <p className={`text-gray-500 ${outfit.className}`}>Loading your courses...</p>
@@ -123,8 +121,10 @@ export default function DashboardPage() {
     );
   }
 
+  const firstName = profile?.full_name?.split(" ")[0] || "Student";
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50/30 px-4 sm:px-6 py-6 sm:py-10">
+    <div className="min-h-screen bg-white px-4 sm:px-6 py-6 sm:py-10">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-10 sm:mb-12">
