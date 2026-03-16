@@ -128,32 +128,56 @@ export default function UploadPage() {
       } = supabase.storage.from("timetables").getPublicUrl(filePath);
 
       // 2. Save document record to Supabase
-      const { error: dbError } = await supabase.from("raw_documents").insert({
-        user_id: user.id,
-        file_url: publicUrl,
-        file_type: fileExt === "pdf" ? "pdf" : "docx",
-      });
+      const { data: docRecord, error: dbError } = await supabase
+        .from("raw_documents")
+        .insert({
+          user_id: user.id,
+          file_url: publicUrl,
+          file_type: fileExt === "pdf" ? "pdf" : "docx",
+        })
+        .select()
+        .single();
 
-      if (dbError) {
-        setError(`Failed to save document record: ${dbError.message}`);
+      if (dbError || !docRecord) {
+        setError(`Failed to save document record: ${dbError?.message}`);
         setUploading(false);
         setUploadProgress("error");
         return;
       }
 
-      // 3. Mark upload as complete — parsing & AI extraction will happen separately
-      setUploadProgress("done");
+      // 3. Parse document + AI course extraction
+      setUploadProgress("parsing");
 
-      // Mark onboarding as complete
-      await supabase
-        .from("profiles")
-        .update({ onboarding_complete: true })
-        .eq("id", user.id);
+      const extractResponse = await fetch("/api/extract", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document_id: docRecord.id }),
+      });
+
+      if (!extractResponse.ok) {
+        const extractError = await extractResponse.json();
+        setError(extractError.error || "Failed to extract courses.");
+        setUploading(false);
+        setUploadProgress("error");
+        return;
+      }
+
+      const extractResult = await extractResponse.json();
+
+      if (!extractResult.success) {
+        setError("Failed to extract courses from timetable.");
+        setUploading(false);
+        setUploadProgress("error");
+        return;
+      }
+
+      // 4. Done!
+      setUploadProgress("done");
 
       // Redirect to dashboard after a short delay
       setTimeout(() => {
         router.push("/dashboard");
-      }, 1500);
+      }, 2000);
     } catch {
       setError("Something went wrong. Please try again.");
       setUploading(false);
@@ -262,12 +286,17 @@ export default function UploadPage() {
           {uploading && uploadProgress !== "error" && (
             <div className="mt-6 space-y-3">
               <ProgressStep
-                label="Uploading file..."
+                label="Uploading file to cloud..."
                 active={uploadProgress === "uploading"}
                 done={["parsing", "extracting", "done"].includes(uploadProgress)}
               />
               <ProgressStep
-                label="Processing complete!"
+                label="Parsing document & extracting courses..."
+                active={uploadProgress === "parsing" || uploadProgress === "extracting"}
+                done={uploadProgress === "done"}
+              />
+              <ProgressStep
+                label="Courses ready!"
                 active={false}
                 done={uploadProgress === "done"}
               />
