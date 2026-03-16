@@ -36,7 +36,7 @@ export async function extractCourses(
   extractedText: string
 ): Promise<CoursesOutput> {
   const model = new ChatOpenAI({
-    modelName: "google/gemini-2.0-flash-lite:preview-02-05:free",
+    modelName: "stepfun/step-3.5-flash:free",
     temperature: 0,
     configuration: {
       baseURL: "https://openrouter.ai/api/v1",
