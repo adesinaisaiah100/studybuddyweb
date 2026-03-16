@@ -94,10 +94,13 @@ export async function POST(request: Request) {
         );
       }
 
-      if (!extractedText) {
+      if (!extractedText || extractedText.trim().length < 50) {
         return NextResponse.json(
-          { error: "Extracted text is empty" },
-          { status: 500 }
+          { 
+            error: "The document text could not be read properly. Please ensure you are uploading a searchable PDF or a DOCX file (not a scanned image).",
+            raw_text: extractedText
+          },
+          { status: 400 }
         );
       }
 
