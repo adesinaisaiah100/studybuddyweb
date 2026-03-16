@@ -71,9 +71,11 @@ export async function POST(request: Request) {
         const buffer = Buffer.from(arrayBuffer);
 
         if (doc.file_type === "pdf") {
-          const { extractText } = await import("unpdf");
-          const { text } = await extractText(buffer);
-          extractedText = text;
+          const { PDFParse } = await import("pdf-parse");
+          const parser = new PDFParse({ data: buffer });
+          const result = await parser.getText();
+          await parser.destroy();
+          extractedText = result.text;
         } else if (doc.file_type === "docx") {
           const mammoth = await import("mammoth");
           const result = await mammoth.extractRawText({ buffer });

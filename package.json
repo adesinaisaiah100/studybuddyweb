@@ -19,10 +19,10 @@
     "lucide-react": "^0.577.0",
     "mammoth": "^1.12.0",
     "next": "16.1.6",
+    "pdf-parse": "^2.4.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "tailwind-merge": "^3.5.0",
-    "unpdf": "^1.4.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
