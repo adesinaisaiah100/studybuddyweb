@@ -66,14 +66,21 @@ export async function POST(request: Request) {
       }
 
       // Parse locally based on file type
+      let buffer: Buffer | null = null;
       try {
         const arrayBuffer = await fileData.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
+        buffer = Buffer.from(arrayBuffer);
 
         if (doc.file_type === "pdf") {
+          console.log("PDF Buffer size:", buffer.length);
           const { PDFParse } = await import("pdf-parse");
           const parser = new PDFParse({ data: buffer });
           const result = await parser.getText();
+          console.log("Full PDF Parsing Result:", JSON.stringify({
+            textLength: result.text?.length,
+            totalPages: result.total,
+            metadata: result.info
+          }, null, 2));
           await parser.destroy();
           extractedText = result.text;
         } else if (doc.file_type === "docx") {
@@ -94,11 +101,12 @@ export async function POST(request: Request) {
         );
       }
 
-      if (!extractedText || extractedText.trim().length < 50) {
+      if (!extractedText || extractedText.trim().length < 10) {
         return NextResponse.json(
           { 
-            error: "The document text could not be read properly. Please ensure you are uploading a searchable PDF or a DOCX file (not a scanned image).",
-            raw_text: extractedText
+            error: "The document text could not be read properly. Please ensure you are uploading a searchable PDF or a DOCX file.",
+            extracted_text: extractedText,
+            buffer_size: buffer.length
           },
           { status: 400 }
         );

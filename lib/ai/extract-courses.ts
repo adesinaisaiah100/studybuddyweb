@@ -15,22 +15,25 @@ const CourseSchema = z.object({
 });
 
 const CoursesOutputSchema = z.object({
-  courses: z.array(CourseSchema).describe("ONLY courses found in the provided text"),
+  courses: z.array(CourseSchema).describe("List of extracted courses found in the text. Return empty array if none found."),
 });
 
 export type ExtractedCourse = z.infer<typeof CourseSchema>;
 export type CoursesOutput = z.infer<typeof CoursesOutputSchema>;
 
-const SYSTEM_PROMPT = `You are a strict data extractor. Your task is to extract university course data from the provided text.
+const SYSTEM_PROMPT = `You are a strict data extraction engine. You will be provided with text from a university timetable.
 
-RULES:
-1. ONLY extract data that is EXPLICITLY present in the user text.
-2. DO NOT use placeholder data (like CSC301 or Operating Systems) unless it is actually in the text.
-3. If no courses are found, return an empty array: {"courses": []}.
-4. Group multiple time slots for the same course together.
-5. Convert days to full names (e.g., "Mon" -> "Monday").
-6. Convert times to 24h format "HH:MM - HH:MM" if possible.
-7. Be precise. Accuracy is critical.`;
+Your goal is to extract every course mentioned and format it into a valid JSON object matching the requested schema.
+
+CRITICAL RULES:
+1. ONLY extract courses that are actually in the text.
+2. If the text is empty or contains no courses, return {"courses": []}.
+3. DO NOT use placeholder names or codes (like CSC301).
+4. Extract the Full Course Title and the Course Code (e.g., MAT101).
+5. Extract EVERY time slot. Group slots for the same course together.
+6. Convert day abbreviations to full names (e.g., "Mon" -> "Monday").
+7. Extract the venue/room if specified.
+8. Be precise. If you are unsure, do not invent data.`;
 
 export async function extractCourses(
   extractedText: string
