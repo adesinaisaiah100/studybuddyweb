@@ -191,20 +191,20 @@ export default function UploadPage() {
       <div className="relative z-10 w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
 
         {/* Left: Upload section */}
-        <div className="w-full max-w-lg mx-auto lg:mx-0">
+        <div className="w-full mx-auto lg:mx-0">
         {/* Header */}
-        <div className="text-center mb-8 sm:mb-10">
+        <div className="text-center lg:text-left mb-8 sm:mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 border border-green-100 text-green-700 text-sm font-medium mb-6">
             <Upload className="w-4 h-4" />
             <span className={outfit.className}>Upload Your Timetable</span>
           </div>
           <h1
-            className={`text-3xl sm:text-4xl font-bold text-gray-900 mb-3 ${titillium.className}`}
+            className={`text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 ${titillium.className}`}
           >
             Let&apos;s set up your <span className="text-green-500">courses.</span>
           </h1>
           <p
-            className={`text-gray-500 text-base sm:text-lg ${outfit.className}`}
+            className={`text-gray-500 text-base sm:text-lg lg:text-xl ${outfit.className}`}
           >
             Upload your timetable and we&apos;ll automatically create your course cards.
           </p>
@@ -344,18 +344,7 @@ export default function UploadPage() {
               </div>
             </div>
           )}
-        </div>
-
-          <div className="flex items-center justify-center lg:justify-start gap-2 mt-8">
-            <div className="w-8 h-1.5 rounded-full bg-green-500" />
-            <div className="w-8 h-1.5 rounded-full bg-green-500" />
-            <div className="w-8 h-1.5 rounded-full bg-gray-200" />
           </div>
-          <p
-            className={`text-center lg:text-left text-sm text-gray-400 mt-3 ${outfit.className}`}
-          >
-            Step 2 of 3 — Upload Timetable
-          </p>
         </div>
 
         {/* Right: Illustration */}
@@ -369,6 +358,20 @@ export default function UploadPage() {
             priority
           />
         </div>
+      </div>
+
+      {/* Step indicator — centered across full page */}
+      <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center">
+        <div className="flex items-center justify-center gap-2">
+          <div className="w-8 h-1.5 rounded-full bg-green-500" />
+          <div className="w-8 h-1.5 rounded-full bg-green-500" />
+          <div className="w-8 h-1.5 rounded-full bg-gray-200" />
+        </div>
+        <p
+          className={`text-center text-sm text-gray-400 mt-3 ${outfit.className}`}
+        >
+          Step 2 of 3 — Upload Timetable
+        </p>
       </div>
     </div>
   );
