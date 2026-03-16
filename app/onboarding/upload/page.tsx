@@ -360,17 +360,17 @@ export default function UploadPage() {
         </div>
       </div>
 
-      {/* Step indicator — centered across full page */}
-      <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center">
+      {/* Step indicator — centered at top */}
+      <div className="absolute top-6 left-0 right-0 flex flex-col items-center">
         <div className="flex items-center justify-center gap-2">
-          <div className="w-8 h-1.5 rounded-full bg-green-500" />
-          <div className="w-8 h-1.5 rounded-full bg-green-500" />
-          <div className="w-8 h-1.5 rounded-full bg-gray-200" />
+          <div className="w-10 h-2 rounded-full bg-green-500" />
+          <div className="w-10 h-2 rounded-full bg-green-500" />
+          <div className="w-10 h-2 rounded-full bg-gray-200" />
         </div>
         <p
-          className={`text-center text-sm text-gray-400 mt-3 ${outfit.className}`}
+          className={`text-center text-sm text-gray-400 mt-2 ${outfit.className}`}
         >
-          Step 2 of 3 — Upload Timetable
+          Step 2 of 3
         </p>
       </div>
     </div>
