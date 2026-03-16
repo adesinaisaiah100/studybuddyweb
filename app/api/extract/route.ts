@@ -71,10 +71,9 @@ export async function POST(request: Request) {
         const buffer = Buffer.from(arrayBuffer);
 
         if (doc.file_type === "pdf") {
-          // eslint-disable-next-line @typescript-eslint/no-require-imports
-          const pdf = require("pdf-parse");
-          const data = await pdf(buffer);
-          extractedText = data.text;
+          const { extractText } = await import("unpdf");
+          const { text } = await extractText(buffer);
+          extractedText = text;
         } else if (doc.file_type === "docx") {
           const mammoth = await import("mammoth");
           const result = await mammoth.extractRawText({ buffer });
