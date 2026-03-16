@@ -101,12 +101,12 @@ export async function POST(request: Request) {
         );
       }
 
-      if (!extractedText || extractedText.trim().length < 10) {
+      if (!extractedText || extractedText.trim().length < 50) {
         return NextResponse.json(
           { 
-            error: "The document text could not be read properly. Please ensure you are uploading a searchable PDF or a DOCX file.",
+            error: "The document text could not be read properly. This usually happens if the PDF is a scanned image (a photo) rather than a digital document. Please upload a searchable PDF or a DOCX file.",
             extracted_text: extractedText,
-            buffer_size: buffer.length
+            buffer_size: buffer?.length || 0
           },
           { status: 400 }
         );
