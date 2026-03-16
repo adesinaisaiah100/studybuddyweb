@@ -36,7 +36,7 @@ const testimonials = [
 
 export default function SocialProofSection() {
   return (
-    <section className="w-full bg-[#f8fafc] py-24 md:py-32 relative overflow-hidden">
+    <section className="w-full bg-[#f8fafc] py-16 sm:py-24 md:py-32 relative overflow-hidden">
       
       {/* Background Decor */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-100/40 rounded-full blur-[120px] pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
@@ -47,13 +47,13 @@ export default function SocialProofSection() {
           <span className={`inline-block py-1.5 px-4 rounded-full bg-white text-green-700 font-medium text-sm mb-6 border border-green-200 shadow-sm ${outfit.className}`}>
             Join The Community
           </span>
-          <h2 className={`text-4xl md:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
             What students are <span className="text-green-500">saying.</span>
           </h2>
         </div>
 
         {/* Chat Thread Container */}
-        <div className={`w-full max-w-2xl flex flex-col gap-8 md:gap-12 relative ${outfit.className}`}>
+        <div className={`w-full max-w-2xl flex flex-col gap-6 sm:gap-8 md:gap-12 relative ${outfit.className}`}>
            
            {/* Faint vertical connecting line */}
            <div className="absolute left-6 md:left-8 top-10 bottom-10 w-px bg-gradient-to-b from-transparent via-gray-200 to-transparent z-0 hidden md:block"></div>
@@ -92,7 +92,7 @@ export default function SocialProofSection() {
                       : 'bg-white border border-gray-100 text-gray-800 rounded-tl-sm hover:shadow-xl hover:-translate-y-1'
                     }
                  `}>
-                    <p className="text-lg md:text-xl font-medium leading-relaxed">
+                    <p className="text-base sm:text-lg md:text-xl font-medium leading-relaxed">
                       &quot;{t.text}&quot;
                     </p>
                  </div>

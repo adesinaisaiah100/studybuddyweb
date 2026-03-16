@@ -73,11 +73,11 @@ export default function HowItWorksSection() {
         ref={containerRef} 
         // The height determines how long the user has to scroll. 
         // 300vh means it takes 3 viewport heights to transition between the 4 steps completely.
-        className="relative h-[300vh] w-full bg-white"
+        className="relative h-[200vh] md:h-[300vh] w-full bg-white"
       >
         
         {/* Sticky Container - This physically stays on screen while the user scrolls through the 400vh */}
-        <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden px-4 md:px-8 py-20">
+        <div className="sticky top-0 h-screen w-full flex items-center justify-center overflow-hidden px-4 md:px-8 py-12 sm:py-20">
         
         <div className="max-w-7xl w-full mx-auto grid grid-cols-1 md:grid-cols-2 gap-10 lg:gap-16 h-full max-h-[700px] items-center">
           
@@ -88,12 +88,12 @@ export default function HowItWorksSection() {
               <span className="inline-block py-1 px-3 rounded-full bg-gray-100 text-gray-800 font-medium text-sm mb-3 border border-gray-200">
                 How It Works
               </span>
-              <h2 className={`text-4xl lg:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
+              <h2 className={`text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
                 From syllabus to <span className="text-green-500">success</span>.
               </h2>
             </div>
 
-            <div className={`relative w-full h-[300px] flex items-center ${outfit.className}`}>
+            <div className={`relative w-full h-[250px] sm:h-[300px] flex items-center ${outfit.className}`}>
 
               {/* Vertical Progress Line */}
               <div className="absolute left-6 md:left-8 top-10 bottom-10 w-1 bg-gray-100 rounded-full hidden md:block">
@@ -148,7 +148,7 @@ export default function HowItWorksSection() {
       <section className="w-full bg-white relative z-20">
         <div className={`w-full max-w-7xl mx-auto px-4 md:px-8 pb-32 pt-16 flex justify-center ${outfit.className}`}>
           <div className="p-6 md:p-8 text-center max-w-2xl w-full mx-auto">
-            <p className="text-xl md:text-2xl font-medium text-gray-800 leading-relaxed">
+            <p className="text-lg sm:text-xl md:text-2xl font-medium text-gray-800 leading-relaxed">
               Over time, <span className="text-green-600 font-bold">StudyBuddy</span> learns how you study and helps you improve.
             </p>
           </div>

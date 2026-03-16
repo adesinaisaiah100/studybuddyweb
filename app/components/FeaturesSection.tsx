@@ -63,7 +63,7 @@ const features = [
 
 export default function FeaturesSection() {
   return (
-    <section id="features" className="w-full py-24 px-4 bg-gray-50 overflow-hidden relative">
+    <section id="features" className="w-full py-16 sm:py-24 px-4 bg-gray-50 overflow-hidden relative">
       
       {/* Background decorations */}
       <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-green-100/40 rounded-full blur-[100px] -z-10 transform translate-x-1/2 -translate-y-1/2"></div>
@@ -76,27 +76,27 @@ export default function FeaturesSection() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium text-sm mb-4 border border-green-200">
             <Sparkles className="w-4 h-4" /> Capabilities
           </div>
-          <h2 className={`text-4xl md:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
+          <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
             Everything you need to <span className="text-green-500"><i>master</i></span> your courses.
           </h2>
-          <p className="text-xl text-gray-600">
+          <p className="text-base sm:text-lg md:text-xl text-gray-600">
             StudyBuddy doesn&apos;t just store your notes. It actively helps you understand them, remember them, and ace your exams.
           </p>
         </div>
 
         {/* Bento Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-6 auto-rows-[minmax(300px,_auto)]">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 sm:gap-6 auto-rows-[minmax(250px,_auto)] sm:auto-rows-[minmax(300px,_auto)]">
           {features.map((feature) => (
             <div 
               key={feature.id}
               className={`group flex flex-col rounded-[2.5rem] bg-white border border-gray-100 shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden relative isolate ${feature.span}`}
             >
               {/* Card Text Content (Top) */}
-              <div className={`p-8 md:p-10 flex-shrink-0 z-10 relative ${outfit.className}`}>
+              <div className={`p-6 sm:p-8 md:p-10 flex-shrink-0 z-10 relative ${outfit.className}`}>
                 <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center mb-6 shadow-sm border border-green-100 group-hover:scale-110 group-hover:bg-green-100 transition-all duration-300">
                   {feature.icon}
                 </div>
-                <h3 className="text-3xl font-bold text-gray-900 mb-2">{feature.title}</h3>
+                <h3 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">{feature.title}</h3>
                 <p className="text-sm font-medium text-gray-700/50 mb-4 tracking-wide">{feature.subtitle}</p>
                 <p className="text-gray-500/90 leading-relaxed max-w-xl">
                   {feature.description}
@@ -107,7 +107,7 @@ export default function FeaturesSection() {
               <div className={`mt-auto relative w-full flex-grow flex items-end justify-center ${feature.id === 'progress-tracking' ? 'px-8 pt-0' : 'px-8 pb-0'}`}>
                 {/* Image Presentation */}
                 <div className={`w-full bg-gray-50/50 rounded-t-2xl border-t border-x border-gray-200 backdrop-blur-sm overflow-hidden 
-                    ${feature.id === 'progress-tracking' ? 'h-48 md:h-[400px] border-b-0 rounded-b-none translate-y-4 group-hover:-translate-y-2 group-hover:scale-[1.02] transition-all duration-500 origin-bottom' : 'h-48 md:h-[350px] translate-y-4 group-hover:translate-y-2 transition-transform duration-500'}`}>
+                    ${feature.id === 'progress-tracking' ? 'h-40 sm:h-48 md:h-[400px] border-b-0 rounded-b-none translate-y-4 group-hover:-translate-y-2 group-hover:scale-[1.02] transition-all duration-500 origin-bottom' : 'h-40 sm:h-48 md:h-[350px] translate-y-4 group-hover:translate-y-2 transition-transform duration-500'}`}>
                   
                   {/* Actual Mockup Image Area */}
                   <div className="w-full h-full relative bg-gray-100 flex items-center justify-center overflow-hidden">

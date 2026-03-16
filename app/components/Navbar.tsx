@@ -10,15 +10,16 @@ const titillium = Titillium_Web({
 function Navbar() {
   return (
     <header className="w-full bg-transparent">
-      <div className="mx-auto flex max-w-8xl items-center justify-between px-2 py-4">
-        <div className="flex items-center gap-3">
+      <div className="mx-auto flex max-w-8xl items-center justify-between px-2 py-3 sm:py-4">
+        <div className="flex items-center gap-2 sm:gap-3">
         <Image          
         src="/Logo1.png"
           alt="Logo"
           width={42}
           height={42}
+          className="w-8 h-8 sm:w-[42px] sm:h-[42px]"
         />
-          <span className={`text-xl font-medium text-neutral-900/80 ${titillium.className}`}>
+          <span className={`text-lg sm:text-xl font-medium text-neutral-900/80 ${titillium.className}`}>
             Study Buddy
           </span>
         </div>
@@ -35,11 +36,11 @@ function Navbar() {
           </a>
         </nav>
 
-        <div className="flex items-center gap-4">
-          <a className="text-sm font-medium text-neutral-600/80 hover:text-neutral-900" href="#login">
+        <div className="flex items-center gap-2 sm:gap-4">
+          <a className="hidden sm:inline text-sm font-medium text-neutral-600/80 hover:text-neutral-900" href="#login">
             Login
           </a>
-          <button className="rounded-full border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-900 hover:border-neutral-400 bg-green-500 hover:bg-green-600 text-white transition-colors duration-200">
+          <button className="rounded-full border border-neutral-300 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors duration-200">
             Start for Free
           </button>
         </div>

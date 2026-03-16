@@ -26,25 +26,25 @@ const universities = [
 
 function UniversityTrustBar() {
   return (
-    <section className="w-full bg-white mt-10">
-      <div className="mx-auto flex w-full  items-center gap-6 px-6 py-6">
-        <span className="whitespace-nowrap text-lg font-semibold text-gray-700/80 mr-20">
+    <section className="w-full bg-white mt-6 sm:mt-10">
+      <div className="mx-auto flex w-full flex-col md:flex-row items-center gap-4 md:gap-6 px-4 sm:px-6 py-4 sm:py-6">
+        <span className="text-center md:text-left whitespace-nowrap text-sm sm:text-base md:text-lg font-semibold text-gray-700/80 md:mr-10 lg:mr-20">
           1000+ Nigerian universities trust us
         </span>
-        <div className="flex flex-1 flex-wrap items-center justify-between gap-6">
+        <div className="flex flex-wrap items-center justify-center md:justify-between gap-4 sm:gap-6 flex-1">
           {universities.map((uni) => (
-            <div key={uni.name} className="flex items-center gap-3 text-gray-600">
-              <div className="relative h-9 w-9">
+            <div key={uni.name} className="flex items-center gap-2 sm:gap-3 text-gray-600">
+              <div className="relative h-7 w-7 sm:h-9 sm:w-9">
                 <Image
                   src={uni.logo}
                   alt={uni.name}
                   width={36}
                   height={36}
-                  className="h-9 w-9 object-contain blur-[1px]"
+                  className="h-7 w-7 sm:h-9 sm:w-9 object-contain blur-[1px]"
                 />
                 <div className="absolute inset-0 bg-white/40" aria-hidden="true" />
               </div>
-              <span className={`text-md text-gray-700/60 ${uni.nameClass}`}>{uni.name}</span>
+              <span className={`hidden sm:inline text-sm md:text-md text-gray-700/60 ${uni.nameClass}`}>{uni.name}</span>
             </div>
           ))}
         </div>

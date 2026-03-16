@@ -17,7 +17,7 @@ const outfit = Outfit({
 
 export default function CtaSection() {
   return (
-    <section id="pricing" className="w-full bg-slate-50 py-20 md:py-32 relative overflow-hidden flex items-center justify-center min-h-[500px]">
+    <section id="pricing" className="w-full bg-slate-50 py-16 sm:py-20 md:py-32 relative overflow-hidden flex items-center justify-center min-h-[400px] sm:min-h-[500px]">
       
       <div className="max-w-6xl mx-auto px-4 md:px-8 relative z-10 w-full">
         <motion.div 
@@ -26,7 +26,7 @@ export default function CtaSection() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.8, ease: "easeOut" }}
           // pure glassmorphism, no shadow required
-          className="w-full rounded-[2.5rem] bg-white/40 backdrop-blur-3xl border border-white/60 p-10 md:p-20 text-center relative overflow-hidden isolate shadow-sm"
+          className="w-full rounded-[2rem] sm:rounded-[2.5rem] bg-white/40 backdrop-blur-3xl border border-white/60 p-8 sm:p-10 md:p-20 text-center relative overflow-hidden isolate shadow-sm"
         >
           {/* Subtle inner reflection for the glass */}
           <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-transparent pointer-events-none"></div>
@@ -38,11 +38,11 @@ export default function CtaSection() {
               <span>Ready to transform your grades?</span>
             </div>
 
-            <h2 className={`text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-6 ${titillium.className}`}>
+            <h2 className={`text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight mb-4 sm:mb-6 ${titillium.className}`}>
               Build a better <span className="text-green-500">study system.</span>
             </h2>
             
-            <p className={`text-lg md:text-xl text-gray-600 mb-10 max-w-2xl font-medium leading-relaxed ${outfit.className}`}>
+            <p className={`text-base sm:text-lg md:text-xl text-gray-600 mb-8 sm:mb-10 max-w-2xl font-medium leading-relaxed ${outfit.className}`}>
               Start using StudyBuddy today and stop stressing over disorganized notes and missed topics.
             </p>
             
