@@ -184,7 +184,7 @@ function StepItem({ step, index, totalSteps, scrollYProgress }: {
   return (
     <motion.div 
       style={{ opacity, y }}
-      className="flex gap-4 md:gap-6 items-start absolute top-1/2 -translate-y-1/2 left-0 w-full md:pl-20 pointer-events-none"
+      className="flex gap-4 md:gap-6 items-start absolute top-50 -translate-y-1/2 left-0 w-full md:pl-20 pointer-events-none"
     >
       <div className="flex-shrink-0 w-10 h-10 md:w-14 md:h-14 rounded-full bg-green-50 border-2 border-green-100 shadow-sm md:flex items-center justify-center text-lg md:text-xl font-bold text-green-600 hidden">
         {step.id}
@@ -196,7 +196,7 @@ function StepItem({ step, index, totalSteps, scrollYProgress }: {
         <h3 className="text-xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-4">{step.title}</h3>
         <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-md">{step.description}</p>
         {/* Inline image for mobile only */}
-        <div className="mt-3 md:hidden w-full h-32 sm:h-70 relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
+        <div className="mt-3 md:hidden w-full h-80 sm:h-40 relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
           <Image 
             src={step.image} 
             alt={step.title} 
