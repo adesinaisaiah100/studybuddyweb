@@ -71,7 +71,8 @@ export async function POST(request: Request) {
         const buffer = Buffer.from(arrayBuffer);
 
         if (doc.file_type === "pdf") {
-          const pdf = (await import("pdf-parse")).default;
+          // eslint-disable-next-line @typescript-eslint/no-require-imports
+          const pdf = require("pdf-parse");
           const data = await pdf(buffer);
           extractedText = data.text;
         } else if (doc.file_type === "docx") {
