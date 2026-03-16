@@ -93,7 +93,7 @@ export default function HowItWorksSection() {
               </h2>
             </div>
 
-            <div className={`relative w-full h-[250px] sm:h-[300px] flex items-center ${outfit.className}`}>
+            <div className={`relative w-full h-[320px] sm:h-[350px] md:h-[300px] flex items-center ${outfit.className}`}>
 
               {/* Vertical Progress Line */}
               <div className="absolute left-6 md:left-8 top-10 bottom-10 w-1 bg-gray-100 rounded-full hidden md:block">
@@ -103,7 +103,7 @@ export default function HowItWorksSection() {
                 />
               </div>
 
-              <div className="relative w-full h-[250px] md:h-[300px] flex items-center">
+              <div className="relative w-full h-[320px] sm:h-[350px] md:h-[300px] flex items-center">
                 {steps.map((step, index) => (
                   <StepItem 
                     key={step.id}
@@ -126,7 +126,7 @@ export default function HowItWorksSection() {
                 style={{ y: yImageTransform }}
               >
                 {steps.map((step) => (
-                  <div key={`img-${step.id}`} className="w-full h-1/4 relative flex items-center justify-center p-6 bg-green-50/30">
+                  <div key={`img-${step.id}`} className="w-full h-full relative flex items-center justify-center p-6 bg-green-50/30">
                       <div className="w-full h-full relative rounded-3xl overflow-hidden shadow-lg border border-gray-100/50 bg-white">
                         <Image 
                           src={step.image} 
@@ -192,9 +192,18 @@ function StepItem({ step, index, totalSteps, scrollYProgress }: {
       <div className="flex-shrink-0 w-8 h-8 rounded-full bg-green-100 text-green-700 md:hidden flex items-center justify-center font-bold text-base mt-1">
         {step.id}
       </div>
-      <div>
+      <div className="flex-1 min-w-0">
         <h3 className="text-xl md:text-3xl font-bold text-gray-900 mb-2 md:mb-4">{step.title}</h3>
         <p className="text-base md:text-lg text-gray-500 leading-relaxed max-w-md">{step.description}</p>
+        {/* Inline image for mobile only */}
+        <div className="mt-3 md:hidden w-full h-32 sm:h-70 relative rounded-2xl overflow-hidden border border-gray-100 bg-gray-50">
+          <Image 
+            src={step.image} 
+            alt={step.title} 
+            fill 
+            className="object-cover object-top"
+          />
+        </div>
       </div>
     </motion.div>
   );

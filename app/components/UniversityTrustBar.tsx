@@ -40,9 +40,9 @@ function UniversityTrustBar() {
                   alt={uni.name}
                   width={36}
                   height={36}
-                  className="h-7 w-7 sm:h-9 sm:w-9 object-contain blur-[1px]"
+                  className="h-7 w-7 sm:h-9 sm:w-9 object-contain sm:blur-[1px]"
                 />
-                <div className="absolute inset-0 bg-white/40" aria-hidden="true" />
+                <div className="absolute inset-0 bg-white/40 hidden sm:block" aria-hidden="true" />
               </div>
               <span className={`hidden sm:inline text-sm md:text-md text-gray-700/60 ${uni.nameClass}`}>{uni.name}</span>
             </div>
