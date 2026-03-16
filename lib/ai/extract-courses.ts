@@ -39,7 +39,7 @@ export async function extractCourses(
   extractedText: string
 ): Promise<CoursesOutput> {
   const model = new ChatOpenAI({
-    modelName: "google/gemini-2.0-flash-001",
+    modelName: "arcee-ai/trinity-mini:free",
     temperature: 0,
     configuration: {
       baseURL: "https://openrouter.ai/api/v1",

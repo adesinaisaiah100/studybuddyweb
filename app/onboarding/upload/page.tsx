@@ -4,6 +4,7 @@ import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Titillium_Web, Outfit } from "next/font/google";
 import { createClient } from "@/lib/supabase/client";
+import Image from "next/image";
 import {
   Upload,
   FileText,
@@ -186,10 +187,11 @@ export default function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12 overflow-hidden relative">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 sm:px-6 lg:px-12 py-8 sm:py-12 overflow-hidden relative">
+      <div className="relative z-10 w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
 
-
-      <div className="relative z-10 w-full max-w-lg">
+        {/* Left: Upload section */}
+        <div className="w-full max-w-lg mx-auto lg:mx-0">
         {/* Header */}
         <div className="text-center mb-8 sm:mb-10">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 border border-green-100 text-green-700 text-sm font-medium mb-6">
@@ -344,17 +346,29 @@ export default function UploadPage() {
           )}
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2 mt-8">
-          <div className="w-8 h-1.5 rounded-full bg-green-500" />
-          <div className="w-8 h-1.5 rounded-full bg-green-500" />
-          <div className="w-8 h-1.5 rounded-full bg-gray-200" />
+          <div className="flex items-center justify-center lg:justify-start gap-2 mt-8">
+            <div className="w-8 h-1.5 rounded-full bg-green-500" />
+            <div className="w-8 h-1.5 rounded-full bg-green-500" />
+            <div className="w-8 h-1.5 rounded-full bg-gray-200" />
+          </div>
+          <p
+            className={`text-center lg:text-left text-sm text-gray-400 mt-3 ${outfit.className}`}
+          >
+            Step 2 of 3 — Upload Timetable
+          </p>
         </div>
-        <p
-          className={`text-center text-sm text-gray-400 mt-3 ${outfit.className}`}
-        >
-          Step 2 of 3 — Upload Timetable
-        </p>
+
+        {/* Right: Illustration */}
+        <div className="hidden lg:flex items-center justify-center">
+          <Image
+            src="/Learning-bro.png"
+            alt="Upload your timetable"
+            width={500}
+            height={500}
+            className="w-full max-w-md h-auto object-contain"
+            priority
+          />
+        </div>
       </div>
     </div>
   );
