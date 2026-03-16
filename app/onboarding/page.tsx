@@ -80,10 +80,8 @@ export default function OnboardingPage() {
     formData.gender;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-green-50/30 flex items-center justify-center px-4 py-12">
-      {/* Background decoration */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-green-100/30 rounded-full blur-[120px] pointer-events-none -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-emerald-100/20 rounded-full blur-[100px] pointer-events-none translate-y-1/2 -translate-x-1/2" />
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-12 overflow-hidden relative">
+
 
       <div className="relative z-10 w-full max-w-lg">
         {/* Header */}
