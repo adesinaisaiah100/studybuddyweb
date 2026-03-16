@@ -78,8 +78,7 @@ export async function POST(request: Request) {
           const result = await parser.getText();
           console.log("Full PDF Parsing Result:", JSON.stringify({
             textLength: result.text?.length,
-            totalPages: result.total,
-            metadata: result.info
+            totalPages: (result as any).total || "unknown",
           }, null, 2));
           await parser.destroy();
           extractedText = result.text;
