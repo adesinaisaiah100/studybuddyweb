@@ -1,6 +1,20 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { extractCourses } from "@/lib/ai/extract-courses";
+import { extractDocumentText } from "@/lib/ai/extract-document-text";
+
+export const runtime = "nodejs";
+
+function envNumber(name: string, fallback: number) {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object";
+}
 
 export async function POST(request: Request) {
   try {
@@ -67,31 +81,24 @@ export async function POST(request: Request) {
 
       // Parse locally based on file type
       let buffer: Buffer | null = null;
+      let parseDiagnostics: Record<string, unknown> | null = null;
       try {
         const arrayBuffer = await fileData.arrayBuffer();
         buffer = Buffer.from(arrayBuffer);
 
-        if (doc.file_type === "pdf") {
-          console.log("PDF Buffer size:", buffer.length);
-          const { PDFParse } = await import("pdf-parse");
-          const parser = new PDFParse({ data: buffer });
-          const result = await parser.getText();
-          console.log("Full PDF Parsing Result:", JSON.stringify({
-            textLength: result.text?.length,
-            totalPages: (result as any).total || "unknown",
-          }, null, 2));
-          await parser.destroy();
-          extractedText = result.text;
-        } else if (doc.file_type === "docx") {
-          const mammoth = await import("mammoth");
-          const result = await mammoth.extractRawText({ buffer });
-          extractedText = result.value;
-        } else {
+        if (doc.file_type !== "pdf" && doc.file_type !== "docx") {
           return NextResponse.json(
             { error: `Unsupported file type for local parsing: ${doc.file_type}` },
             { status: 400 }
           );
         }
+
+        const parsed = await extractDocumentText({
+          buffer,
+          fileType: doc.file_type,
+        });
+        extractedText = parsed.text;
+        parseDiagnostics = parsed.diagnostics;
       } catch (parseError) {
         console.error("Local parsing error:", parseError);
         return NextResponse.json(
@@ -100,12 +107,30 @@ export async function POST(request: Request) {
         );
       }
 
-      if (!extractedText || extractedText.trim().length < 50) {
+      const minChars = envNumber("EXTRACT_MIN_TEXT_CHARS", 50);
+
+      if (!extractedText || extractedText.trim().length < minChars) {
+
+        let message =
+          "The document text could not be read properly. If this is a scanned/photographed PDF, please upload a clearer scan or a DOCX.";
+
+        if (isRecord(parseDiagnostics)) {
+          const ocrAttempted = parseDiagnostics.ocrAttempted;
+          if (ocrAttempted === false) {
+            message =
+              "The document looks like a scanned/photographed PDF, but OCR is not configured on the server. Set OPENROUTER_API_KEY (and optionally OCR_MODEL), then re-upload.";
+          } else if (ocrAttempted === true) {
+            message =
+              "The document looks like a scanned/photographed PDF. OCR ran but still couldn’t recover enough text. Try a clearer scan (higher contrast, less blur) or upload a DOCX.";
+          }
+        }
+
         return NextResponse.json(
           { 
-            error: "The document text could not be read properly. This usually happens if the PDF is a scanned image (a photo) rather than a digital document. Please upload a searchable PDF or a DOCX file.",
+            error: message,
             extracted_text: extractedText,
-            buffer_size: buffer?.length || 0
+            buffer_size: buffer?.length || 0,
+            parse_diagnostics: parseDiagnostics,
           },
           { status: 400 }
         );
@@ -119,7 +144,7 @@ export async function POST(request: Request) {
     }
 
     // 3. Send extracted text to AI for course extraction
-    console.log("EXTRACTED TEXT FOR AI:", extractedText);
+    console.log("EXTRACTED TEXT LENGTH:", extractedText.length);
     const aiResult = await extractCourses(extractedText);
 
     // 4. Save courses to database

@@ -21,7 +21,11 @@ const CoursesOutputSchema = z.object({
 export type ExtractedCourse = z.infer<typeof CourseSchema>;
 export type CoursesOutput = z.infer<typeof CoursesOutputSchema>;
 
-const SYSTEM_PROMPT = `You are a strict data extraction engine. You will be provided with text from a university timetable.
+const SYSTEM_PROMPT = `You are a strict data extraction engine. You will be provided with extracted content from a university timetable.
+
+The input may be either:
+- plain text, OR
+- a table-like dump where columns are separated by TAB characters (\\t) and pages are separated by "--- PAGE N ---".
 
 Your goal is to extract every course mentioned and format it into a valid JSON object matching the requested schema.
 
@@ -39,7 +43,7 @@ export async function extractCourses(
   extractedText: string
 ): Promise<CoursesOutput> {
   const model = new ChatOpenAI({
-    modelName: "google/gemini-2.0-flash-lite:preview-02-05:free",
+    modelName: process.env.EXTRACT_COURSES_MODEL || "google/gemini-2.5-flash",
     temperature: 0,
     configuration: {
       baseURL: "https://openrouter.ai/api/v1",
