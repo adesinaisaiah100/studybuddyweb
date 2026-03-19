@@ -1,17 +1,19 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Titillium_Web, Outfit } from "next/font/google";
+import Image from "next/image";
 import {
-  GraduationCap,
   LogOut,
   Plus,
   Clock,
   MapPin,
   BookOpen,
   Loader2,
+  X,
 } from "lucide-react";
 
 const titillium = Titillium_Web({
@@ -60,47 +62,79 @@ export default function DashboardPage() {
   const supabase = createClient();
   const router = useRouter();
 
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  // Add course state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [newCourseCode, setNewCourseCode] = useState("");
+  const [newCourseTitle, setNewCourseTitle] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState("");
 
-  useEffect(() => {
-    async function loadData() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/");
-        return;
-      }
-
-      // Load profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("full_name, university")
-        .eq("id", user.id)
-        .single();
-
-      if (profileData) setProfile(profileData);
-
-      // Load courses with schedules
-      const { data: coursesData } = await supabase
-        .from("courses")
-        .select("*, course_schedules(*)")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
-
-      if (coursesData) setCourses(coursesData);
-      setLoading(false);
+  const fetcher = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      router.push("/");
+      throw new Error("No user");
     }
 
-    loadData();
-  }, [supabase, router]);
+    const [profileRes, coursesRes] = await Promise.all([
+      supabase.from("profiles").select("full_name, university").eq("id", user.id).single(),
+      supabase.from("courses").select("*, course_schedules(*)").eq("user_id", user.id).order("created_at", { ascending: true })
+    ]);
+
+    return {
+      profile: profileRes.data,
+      courses: coursesRes.data || []
+    };
+  };
+
+  const { data, error, mutate } = useSWR('dashboard-data', fetcher);
+  
+  const loading = !data && !error;
+  const profile = data?.profile;
+  const courses = data?.courses || [];
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push("/");
+  };
+
+  const handleAddCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCourseCode || !newCourseTitle) return;
+
+    setIsAdding(true);
+    setAddError("");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setAddError("Not authenticated");
+      setIsAdding(false);
+      return;
+    }
+
+    const { data: course, error } = await supabase
+      .from("courses")
+      .insert({
+        user_id: user.id,
+        code: newCourseCode.trim(),
+        title: newCourseTitle.trim(),
+      })
+      .select()
+      .single();
+
+    if (error || !course) {
+      setAddError("Failed to add course. Please try again.");
+      setIsAdding(false);
+      return;
+    }
+
+    // Refresh courses
+    await mutate();
+    
+    setIsAdding(false);
+    setIsAddModalOpen(false);
+    setNewCourseCode("");
+    setNewCourseTitle("");
   };
 
   const getGreeting = () => {
@@ -125,13 +159,18 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-white px-4 sm:px-6 py-6 sm:py-10">
-      <div className="max-w-6xl mx-auto">
+      <div className="w-full px-5 mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-10 sm:mb-12">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-green-600" />
-            </div>
+            <Image 
+              src="/Logo1.png" 
+              alt="Study Buddy Logo" 
+              width={40} 
+              height={40} 
+              className="object-contain" 
+              priority 
+            />
             <span className={`text-xl font-bold text-gray-900 ${titillium.className}`}>
               StudyBuddy
             </span>
@@ -183,7 +222,7 @@ export default function DashboardPage() {
                 {/* Schedule pills */}
                 {course.course_schedules && course.course_schedules.length > 0 && (
                   <div className="space-y-2">
-                    {course.course_schedules.slice(0, 3).map((slot) => (
+                    {course.course_schedules.slice(0, 3).map((slot: Schedule) => (
                       <div
                         key={slot.id}
                         className="flex items-center gap-2 text-sm text-gray-600"
@@ -216,9 +255,7 @@ export default function DashboardPage() {
 
           {/* Add Course Card */}
           <button
-            onClick={() => {
-              // TODO: Add manual course creation modal
-            }}
+            onClick={() => setIsAddModalOpen(true)}
             className="group border-2 border-dashed border-gray-200 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center gap-3 hover:border-green-300 hover:bg-green-50/30 transition-all duration-200 min-h-[200px] cursor-pointer"
           >
             <div className="w-12 h-12 rounded-2xl bg-gray-100 group-hover:bg-green-100 flex items-center justify-center transition-colors duration-200">
@@ -230,6 +267,71 @@ export default function DashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Add Course Modal */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-2xl relative">
+            <button
+              onClick={() => setIsAddModalOpen(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className={`text-2xl font-bold text-gray-900 mb-6 ${titillium.className}`}>
+              Add New Course
+            </h2>
+
+            <form onSubmit={handleAddCourse} className={`space-y-4 ${outfit.className}`}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Course Code
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. MAT101"
+                  value={newCourseCode}
+                  onChange={(e) => setNewCourseCode(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Course Title
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Introduction to Calculus"
+                  value={newCourseTitle}
+                  onChange={(e) => setNewCourseTitle(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
+                />
+              </div>
+
+              {addError && (
+                <p className="text-red-500 text-sm mt-2">{addError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isAdding}
+                className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+              >
+                {isAdding ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" /> Adding...
+                  </>
+                ) : (
+                  "Add Course"
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
