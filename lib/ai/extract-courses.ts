@@ -42,8 +42,13 @@ CRITICAL RULES:
 export async function extractCourses(
   extractedText: string
 ): Promise<CoursesOutput> {
+  const modelName = process.env.OPENROUTER_EXTRACT_COURSES_MODEL;
+  if (!modelName) {
+    throw new Error("Missing OPENROUTER_EXTRACT_COURSES_MODEL env variable.");
+  }
+
   const model = new ChatOpenAI({
-    modelName: process.env.EXTRACT_COURSES_MODEL || "google/gemini-2.5-flash",
+    modelName,
     temperature: 0,
     configuration: {
       baseURL: "https://openrouter.ai/api/v1",
