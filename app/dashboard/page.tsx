@@ -13,7 +13,7 @@ import {
   MapPin,
   BookOpen,
   Loader2,
-  X,
+  X, UploadCloud,
 } from "lucide-react";
 
 const titillium = Titillium_Web({
@@ -25,26 +25,6 @@ const outfit = Outfit({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
-
-type Schedule = {
-  id: string;
-  day: string;
-  time_slot: string;
-  venue: string | null;
-};
-
-type Course = {
-  id: string;
-  code: string;
-  title: string;
-  description: string | null;
-  course_schedules: Schedule[];
-};
-
-type Profile = {
-  full_name: string;
-  university: string;
-};
 
 // Color palette for course cards
 const CARD_COLORS = [
@@ -68,6 +48,7 @@ export default function DashboardPage() {
   const [newCourseTitle, setNewCourseTitle] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const [addError, setAddError] = useState("");
+  const [outlineFile, setOutlineFile] = useState<File | null>(null);
 
   const fetcher = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -222,7 +203,7 @@ export default function DashboardPage() {
                 {/* Schedule pills */}
                 {course.course_schedules && course.course_schedules.length > 0 && (
                   <div className="space-y-2">
-                    {course.course_schedules.slice(0, 3).map((slot: Schedule) => (
+                    {course.course_schedules.slice(0, 3).map((slot: { id: string; day: string; time_slot: string; venue: string | null }) => (
                       <div
                         key={slot.id}
                         className="flex items-center gap-2 text-sm text-gray-600"
@@ -309,6 +290,35 @@ export default function DashboardPage() {
                   onChange={(e) => setNewCourseTitle(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-all"
                 />
+              </div>
+
+              {/* Course Outline Upload */}
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Course Outline (main slide/pdf)
+                </label>
+                <div className={`border-2 border-dashed rounded-xl p-4 flex flex-col items-center justify-center text-center relative ${outlineFile ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200 hover:border-green-400 hover:bg-green-50/50 transition-colors'}`}>
+                  <input 
+                    type="file" 
+                    required
+                    accept=".pdf,.pptx,.docx,.txt,.png,.jpg,.jpeg"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setOutlineFile(e.target.files[0]);
+                      }
+                    }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                  />
+                  <UploadCloud className={`w-8 h-8 mb-3 ${outlineFile ? 'text-green-600' : 'text-gray-400'}`} />
+                  {outlineFile ? (
+                    <p className="text-sm font-semibold text-green-700">{outlineFile.name}</p>
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      <span className="font-semibold text-green-600">Click to upload</span> or drag and drop
+                      <p className="text-xs text-gray-400 mt-1">PDF, PPTX, DOCX, TXT, PNG, JPG, JPEG (max. 10MB)</p>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {addError && (

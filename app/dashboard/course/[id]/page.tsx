@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, use } from "react";
+import React, { useEffect, useMemo, useState, use } from "react";
 import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -61,6 +61,64 @@ type Course = {
   course_materials?: CourseMaterial[];
 };
 
+type ProcessingJob = {
+  id: string;
+  material_id: string;
+  status: "queued" | "extracting" | "vectorizing" | "completed" | "failed";
+  milestone: "uploaded" | "extracting" | "vectorizing" | "complete" | "failed";
+  eta_range: string | null;
+  attempts: number;
+  max_attempts: number;
+  last_error: string | null;
+  updated_at: string;
+};
+
+type OutlineModule = {
+  title: string;
+  summary: string;
+  keywords: string[];
+};
+
+type CourseOutlineData = {
+  id: string;
+  status: "ready" | "partial" | "failed";
+  outline_json: {
+    courseTitle: string;
+    overview: string;
+    modules: OutlineModule[];
+  };
+  youtube_status?: string | null;
+  web_status?: string | null;
+  generated_at: string;
+};
+
+type ModuleResource = {
+  id: string;
+  module_slug: string;
+  module_title: string;
+  resource_type: "web" | "youtube";
+  title: string;
+  url: string;
+  source: string;
+  score: number;
+};
+
+const statusClassMap: Record<ProcessingJob["status"], string> = {
+  queued: "bg-amber-50 text-amber-700 border border-amber-200",
+  extracting: "bg-blue-50 text-blue-700 border border-blue-200",
+  vectorizing: "bg-indigo-50 text-indigo-700 border border-indigo-200",
+  completed: "bg-green-50 text-green-700 border border-green-200",
+  failed: "bg-red-50 text-red-700 border border-red-200",
+};
+
+const statusLabelMap: Record<ProcessingJob["status"], string> = {
+  queued: "Queued",
+  extracting: "Extracting",
+  vectorizing: "Vectorizing",
+  completed: "Ready",
+  failed: "Failed",
+};
+
 export default function CourseDashboardPage({
   params,
 }: {
@@ -93,6 +151,7 @@ export default function CourseDashboardPage({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
+  const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null);
 
   const fetcher = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -117,7 +176,95 @@ export default function CourseDashboardPage({
   };
 
   const { data: course, error, mutate } = useSWR(`course-${unwrappedParams.id}`, fetcher);
+  const jobsFetcher = async () => {
+    if (!unwrappedParams.id) return [] as ProcessingJob[];
+    try {
+      const response = await fetch(`/api/process-jobs/status?courseId=${unwrappedParams.id}`);
+      if (!response.ok) {
+        return [] as ProcessingJob[];
+      }
+      const payload = await response.json();
+      return (payload.jobs || []) as ProcessingJob[];
+    } catch {
+      return [] as ProcessingJob[];
+    }
+  };
+
+  const { data: jobs = [], mutate: mutateJobs } = useSWR(
+    `processing-jobs-${unwrappedParams.id}`,
+    jobsFetcher,
+    {
+      refreshInterval: (latestJobs: ProcessingJob[] | undefined) =>
+        latestJobs?.some((job) => ["queued", "extracting", "vectorizing"].includes(job.status))
+          ? 10000
+          : 0,
+    }
+  );
+
+  const outlineFetcher = async () => {
+    const response = await fetch(`/api/course-outline?courseId=${unwrappedParams.id}`);
+    if (!response.ok) {
+      return { outline: null as CourseOutlineData | null, resources: [] as ModuleResource[] };
+    }
+
+    const payload = await response.json();
+    return {
+      outline: (payload.outline ?? null) as CourseOutlineData | null,
+      resources: (payload.resources ?? []) as ModuleResource[],
+    };
+  };
+
+  const { data: outlineData, mutate: mutateOutline } = useSWR(
+    `course-outline-${unwrappedParams.id}`,
+    outlineFetcher,
+    {
+      refreshInterval: () => {
+        const hasPendingJobs = jobs.some((job) => ["queued", "extracting", "vectorizing"].includes(job.status));
+        return hasPendingJobs ? 12000 : 0;
+      },
+    }
+  );
+
+  const jobsByMaterialId = useMemo(() => {
+    const map = new Map<string, ProcessingJob>();
+    for (const job of jobs) {
+      if (!map.has(job.material_id)) {
+        map.set(job.material_id, job);
+      }
+    }
+    return map;
+  }, [jobs]);
+
+  useEffect(() => {
+    const hasPendingJobs = jobs.some((job) =>
+      ["queued", "extracting", "vectorizing"].includes(job.status)
+    );
+
+    if (!hasPendingJobs) return;
+
+    const interval = setInterval(() => {
+      fetch("/api/process-jobs/run-next", { method: "POST" }).catch(() => {
+        return;
+      });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [jobs]);
+
   const loading = !course && !error;
+
+  const getJobForMaterial = (materialId: string) => jobsByMaterialId.get(materialId);
+
+  const renderStatusBadge = (materialId: string) => {
+    const job = getJobForMaterial(materialId);
+    if (!job) return null;
+
+    return (
+      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md ${statusClassMap[job.status]}`}>
+        {statusLabelMap[job.status]}
+      </span>
+    );
+  };
 
   // Sync editing fields with course data
   useEffect(() => {
@@ -228,37 +375,112 @@ export default function CourseDashboardPage({
     }
   };
 
+  const getStoragePathFromPublicUrl = (publicUrl: string, bucketName: string) => {
+    const marker = `/storage/v1/object/public/${bucketName}/`;
+    const markerIndex = publicUrl.indexOf(marker);
+    if (markerIndex === -1) return null;
+    return decodeURIComponent(publicUrl.slice(markerIndex + marker.length));
+  };
+
+  const handleDeleteMaterial = async (material: CourseMaterial) => {
+    if (!course) return;
+    if (!confirm("Delete this uploaded material?")) return;
+
+    setDeletingMaterialId(material.id);
+
+    try {
+      const storagePath = getStoragePathFromPublicUrl(material.file_url, "course-materials");
+      if (storagePath) {
+        await supabase.storage.from("course-materials").remove([storagePath]);
+      }
+
+      await supabase.from("course_embeddings").delete().eq("material_id", material.id);
+      await supabase.from("processing_jobs").delete().eq("material_id", material.id);
+
+      const { error: deleteError } = await supabase
+        .from("course_materials")
+        .delete()
+        .eq("id", material.id)
+        .eq("course_id", course.id);
+
+      if (deleteError) {
+        alert("Failed to delete material: " + deleteError.message);
+      } else {
+        await mutate();
+        await mutateJobs();
+        await mutateOutline();
+      }
+    } catch (deleteError) {
+      alert("Failed to delete material. Please try again.");
+      console.error("Delete material error", deleteError);
+    } finally {
+      setDeletingMaterialId(null);
+    }
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile) return alert("Please select a file.");
 
     setIsUploading(true);
+    const selectedFile = uploadFile;
+    const selectedTitle = uploadTitle.trim();
+    const selectedType = uploadType;
     
     try {
-      // 1. Client-Side Text Extraction (Prevents server timeouts and reads scanned PDF images)
-      setUploadProgress("Extracting text locally...");
-      const extractedText = await extractTextFromFile(uploadFile, (progressStatus) => {
-        setUploadProgress(progressStatus);
-      });
+      // 1. Fast preview extraction (first pages / first chunk)
+      setUploadProgress("Extracting preview pages...");
+      const previewText = await extractTextFromFile(
+        selectedFile,
+        () => {
+          setUploadProgress("Extracting preview pages...");
+        },
+        { pass: "preview" }
+      );
 
-      if (!extractedText || extractedText.trim() === "") {
+      if (!previewText || previewText.trim() === "") {
         alert("Could not extract any text from this document. Please ensure it is a valid class material.");
         setIsUploading(false);
         setUploadProgress("");
         return;
       }
 
-      // 2. Upload only the Extracted Text to Supabase Storage (Saves ~95% space vs storing heavy PDFs!)
-      setUploadProgress("Uploading extracted text to cloud...");
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.txt`;
-      const filePath = `${course!.id}/${fileName}`;
-      
-      // Convert the raw string into a Blob
-      const textBlob = new Blob([extractedText], { type: 'text/plain' });
+      // 2. Upload file to Supabase Storage
+      const isPrimarySlide = selectedType === "primary_slide";
+      setUploadProgress(
+        isPrimarySlide
+          ? "Uploading original file to cloud..."
+          : "Uploading extracted text to cloud..."
+      );
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        alert("You must be logged in to upload materials.");
+        setIsUploading(false);
+        setUploadProgress("");
+        return;
+      }
+
+      let filePath = "";
+      let fileToUpload: File | Blob;
+
+      if (isPrimarySlide) {
+        const fileExt = selectedFile.name.split(".").pop() || "";
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+        filePath = `${user.id}/${course!.id}/${fileName}`;
+        fileToUpload = selectedFile;
+      } else {
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.txt`;
+        filePath = `${user.id}/${course!.id}/${fileName}`;
+        fileToUpload = new Blob([previewText], { type: "text/plain" });
+      }
 
       const { error: uploadError } = await supabase.storage
         .from('course-materials')
-        .upload(filePath, textBlob);
+        .upload(filePath, fileToUpload);
 
       if (uploadError) {
         alert("Error uploading file: " + uploadError.message);
@@ -278,8 +500,8 @@ export default function CourseDashboardPage({
         .from('course_materials')
         .insert({
           course_id: course!.id,
-          title: uploadTitle.trim(),
-          material_type: uploadType,
+          title: selectedTitle,
+          material_type: selectedType,
           file_url: publicUrlData.publicUrl,
         })
         .select()
@@ -288,31 +510,77 @@ export default function CourseDashboardPage({
       if (dbError || !newMaterial) {
         alert("Error saving material info: " + (dbError?.message || 'Unknown error'));
       } else {
-        // 5. Call the Document Processing API, passing the RAW text we just extracted!
-        setUploadProgress("Generating AI vectors...");
-        try {
-          const processRes = await fetch("/api/process-document", {
+        const enqueueJob = async (rawText: string) => {
+          const textBytes = new TextEncoder().encode(rawText);
+          const hashBuffer = await crypto.subtle.digest("SHA-256", textBytes);
+          const contentHash = Array.from(new Uint8Array(hashBuffer))
+            .map((value) => value.toString(16).padStart(2, "0"))
+            .join("");
+
+          const processRes = await fetch("/api/process-jobs/enqueue", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               materialId: newMaterial.id,
               courseId: course!.id,
-              materialType: uploadType,
-              title: uploadTitle.trim(),
-              rawText: extractedText, // Send the locally extracted text directly!
+              materialType: selectedType,
+              title: selectedTitle,
+              rawText,
+              contentHash,
             }),
           });
 
           if (!processRes.ok) {
-            console.error("Vector processing failed", await processRes.text());
+            console.error("Queueing failed", await processRes.text());
+            return false;
+          }
+
+          return true;
+        };
+
+        // 5. Enqueue preview payload first for fast outline context
+        setUploadProgress("Queuing quick analysis...");
+        try {
+          const quickQueued = await enqueueJob(previewText);
+
+          if (quickQueued) {
+            fetch("/api/process-jobs/run-next", { method: "POST" }).catch(() => {
+              return;
+            });
           }
         } catch (apiError) {
-          console.error("Failed to call processing API:", apiError);
+          console.error("Failed to queue processing API:", apiError);
         }
 
-        setUploadProgress("Finished!");
+        // 6. Continue background extraction for remaining pages/chunks and re-enqueue full payload
+        void (async () => {
+          try {
+            const remainingText = await extractTextFromFile(selectedFile, () => {
+              return;
+            }, { pass: "remainder" });
+
+            const fullText = `${previewText}\n\n${remainingText}`.trim();
+            if (!remainingText || fullText.length <= previewText.length) {
+              return;
+            }
+
+            const fullQueued = await enqueueJob(fullText);
+            if (fullQueued) {
+              fetch("/api/process-jobs/run-next", { method: "POST" }).catch(() => {
+                return;
+              });
+              await mutateJobs();
+            }
+          } catch (backgroundError) {
+            console.error("Background full extraction enqueue failed:", backgroundError);
+          }
+        })();
+
+        setUploadProgress("Uploaded. Processing in background...");
         // Refresh UI to show the new material
         await mutate();
+        await mutateJobs();
+        await mutateOutline();
       }
     } catch (error) {
       console.error(error);
@@ -370,6 +638,12 @@ export default function CourseDashboardPage({
             label="Schedules" 
             active={activeTab === "schedules"} 
             onClick={() => setActiveTab("schedules")} 
+          />
+          <SidebarButton 
+            icon={<FileText className="w-5 h-5" />} 
+            label="Materials" 
+            active={activeTab === "materials"} 
+            onClick={() => setActiveTab("materials")} 
           />
           <SidebarButton 
             icon={<FileText className="w-5 h-5" />} 
@@ -574,52 +848,174 @@ export default function CourseDashboardPage({
                   <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
                     {course.title}
                   </h1>
-                  {course.course_materials && course.course_materials.length > 0 && (
-                    <button
-                      onClick={() => setIsUploadModalOpen(true)}
-                      className={`flex-shrink-0 flex items-center gap-2 bg-green-50 text-green-700 hover:bg-green-100 hover:text-green-800 px-4 py-2.5 rounded-xl font-semibold transition-colors ${outfit.className}`}
-                    >
-                      <FileUp className="w-4 h-4" /> Add Material
-                    </button>
-                  )}
                 </div>
 
-                {(!course.course_materials || course.course_materials.length === 0) ? (
+                {(!course.course_materials || !course.course_materials.find(m => m.material_type === 'primary_slide')) ? (
                   <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center text-center mb-8">
                     <div className="w-20 h-20 bg-white shadow-sm text-green-600 rounded-2xl flex items-center justify-center mb-6">
                       <UploadCloud className="w-10 h-10" />
                     </div>
                     <h3 className={`text-2xl font-bold text-gray-900 mb-3 ${titillium.className}`}>
-                      Upload Course Knowledge
+                      Upload Course Outline
                     </h3>
                     <p className={`text-gray-500 max-w-md mx-auto mb-8 ${outfit.className}`}>
-                      Get started by uploading your main course slide, syllabus, or textbook. We&apos;ll automatically build your course outline and train your Study Buddy AI.
+                      Upload the main course syllabus or outline. We&apos;ll automatically structure your course dashboard based on it.
                     </p>
-                    <button
-                      onClick={() => setIsUploadModalOpen(true)}
-                      className={`bg-green-600 hover:bg-green-700 text-white px-8 py-3.5 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md flex items-center gap-2 ${outfit.className}`}
-                    >
-                      <FileUp className="w-5 h-5" />
-                      Upload First Material
-                    </button>
+                    
+                    <div className="w-full max-w-md bg-white p-4 rounded-xl border border-gray-200 shadow-sm text-left relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Main Outline File</label>
+                      <input 
+                        type="file" 
+                        accept=".pdf,.pptx,.docx,.txt"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setUploadFile(e.target.files[0]);
+                            if (!uploadTitle) setUploadTitle(e.target.files[0].name.replace(/\.[^/.]+$/, ""));
+                            setUploadType("primary_slide");
+                          }
+                        }}
+                        className="w-full mb-3 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                      />
+                      {uploadFile && (
+                        <button
+                          onClick={handleUploadSubmit}
+                          disabled={isUploading}
+                          className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+                        >
+                          {isUploading ? (
+                            <><Loader2 className="w-4 h-4 animate-spin" /> {uploadProgress || "Uploading..."}</>
+                          ) : (
+                            <><FileUp className="w-4 h-4" /> Upload Course File</>
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="mb-10">
                     <h3 className={`text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 ${titillium.className}`}>
-                      <FileText className="w-5 h-5 text-gray-400" /> Course Materials
+                      <FileText className="w-5 h-5 text-green-600" /> Main Course Outline
                     </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {course.course_materials.map((mat) => (
-                        <div key={mat.id} className="p-4 rounded-xl border border-gray-200 hover:border-green-200 transition-colors bg-white flex items-start gap-4">
-                           <div className="w-10 h-10 bg-green-50 text-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
-                             <FileText className="w-5 h-5" />
-                           </div>
-                           <div>
-                             <p className={`font-semibold text-gray-900 line-clamp-1 ${outfit.className}`}>{mat.title}</p>
-                             <p className={`text-xs text-gray-500 uppercase tracking-widest mt-1 ${outfit.className}`}>{mat.material_type.replace('_', ' ')}</p>
-                           </div>
+                    {course.course_materials.filter(m => m.material_type === 'primary_slide').map(mat => (
+                      <div key={mat.id} className="p-5 rounded-2xl border border-green-200 bg-green-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <FileText className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className={`font-bold text-gray-900 text-lg line-clamp-1 ${outfit.className}`}>{mat.title}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className={`text-sm text-gray-500 font-medium tracking-wide ${outfit.className}`}>Primary File</p>
+                              {renderStatusBadge(mat.id)}
+                            </div>
+                          </div>
                         </div>
-                      ))}
+                        <div className="flex items-center gap-2">
+                          <a href={mat.file_url} target="_blank" rel="noreferrer" className="text-sm font-semibold text-green-700 hover:text-green-800 bg-white px-4 py-2 border border-green-200 rounded-lg shadow-sm hover:shadow transition-all text-center">
+                            View File
+                          </a>
+                          <button
+                            onClick={() => handleDeleteMaterial(mat)}
+                            disabled={deletingMaterialId === mat.id}
+                            className="text-sm font-semibold text-red-600 hover:text-red-700 bg-white px-3 py-2 border border-red-200 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-60"
+                          >
+                            {deletingMaterialId === mat.id ? "Deleting..." : "Delete"}
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {jobs.some((job) => ["queued", "extracting", "vectorizing", "failed"].includes(job.status)) && (
+                  <div className="mb-8 p-4 rounded-xl border border-gray-200 bg-white">
+                    <div className="flex items-center justify-between gap-4">
+                      <h4 className={`text-sm font-semibold text-gray-900 ${outfit.className}`}>
+                        Background Processing Queue
+                      </h4>
+                      <span className={`text-xs text-gray-500 ${outfit.className}`}>
+                        Updates every few seconds
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      {jobs
+                        .filter((job) => ["queued", "extracting", "vectorizing", "failed"].includes(job.status))
+                        .slice(0, 4)
+                        .map((job) => (
+                          <div key={job.id} className="flex items-center justify-between text-xs text-gray-600">
+                            <span className="truncate pr-3">{statusLabelMap[job.status]}</span>
+                            <span className="text-gray-500">{job.eta_range || "--"}</span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+
+                {outlineData?.outline && (
+                  <div className="mb-10 rounded-2xl border border-gray-200 bg-white p-5">
+                    <div className="flex items-center justify-between gap-3 mb-3">
+                      <h3 className={`text-lg font-bold text-gray-900 ${titillium.className}`}>
+                        Course Outline & Resources
+                      </h3>
+                      <span className={`text-xs text-gray-500 ${outfit.className}`}>
+                        {outlineData.outline.youtube_status === "disabled_no_api_key"
+                          ? "YouTube optional (API key not set)"
+                          : "Web + YouTube resources"}
+                      </span>
+                    </div>
+
+                    <p className={`text-sm text-gray-600 mb-4 ${outfit.className}`}>
+                      {outlineData.outline.outline_json.overview}
+                    </p>
+
+                    <div className="mb-4">
+                      <h4 className={`text-sm font-semibold text-gray-900 mb-2 ${outfit.className}`}>
+                        Course Modules
+                      </h4>
+                      <ol className={`list-decimal list-inside text-sm text-gray-600 space-y-1 ${outfit.className}`}>
+                        {outlineData.outline.outline_json.modules.map((module) => (
+                          <li key={`list-${module.title}`}>{module.title}</li>
+                        ))}
+                      </ol>
+                    </div>
+
+                    <div className="space-y-4">
+                      {outlineData.outline.outline_json.modules.map((module) => {
+                        const moduleResources = (outlineData.resources || []).filter(
+                          (resource) => resource.module_title === module.title
+                        );
+
+                        return (
+                          <div key={module.title} className="rounded-xl border border-gray-100 p-4">
+                            <h4 className={`font-semibold text-gray-900 ${outfit.className}`}>{module.title}</h4>
+                            <p className={`text-sm text-gray-600 mt-1 ${outfit.className}`}>{module.summary}</p>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {module.keywords.map((keyword) => (
+                                <span key={keyword} className={`text-[10px] px-2 py-1 rounded-md bg-gray-100 text-gray-600 ${outfit.className}`}>
+                                  {keyword}
+                                </span>
+                              ))}
+                            </div>
+
+                            {moduleResources.length > 0 && (
+                              <div className="mt-3 space-y-1">
+                                {moduleResources.slice(0, 5).map((resource) => (
+                                  <a
+                                    key={resource.id}
+                                    href={resource.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className={`block text-sm text-blue-700 hover:underline ${outfit.className}`}
+                                  >
+                                    {resource.resource_type === "youtube" ? "[YouTube] " : "[Web] "}
+                                    {resource.title}
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -633,18 +1029,75 @@ export default function CourseDashboardPage({
                     {course.course_schedules.map((slot) => (
                       <div
                         key={slot.id}
-                        className={`bg-green-50 border border-green-100 rounded-xl px-4 py-3 flex items-center gap-3 ${outfit.className}`}
+                        className={`bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 ${outfit.className}`}
                       >
                         <Clock className="w-4 h-4 text-green-600" />
                         <div>
-                          <p className="font-semibold text-green-800 text-sm leading-none">{slot.day}</p>
-                          <p className="text-green-600 text-xs mt-1">{slot.time_slot}</p>
+                          <p className="font-semibold text-gray-900 text-sm leading-none">{slot.day}</p>
+                          <p className="text-gray-500 text-xs mt-1">{slot.time_slot}</p>
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
                   <p className={`text-gray-500 text-sm ${outfit.className}`}>No schedules added.</p>
+                )}
+              </div>
+            )}
+
+            {/* --- MATERIALS TAB --- */}
+            {activeTab === "materials" && (
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                  <div>
+                    <h2 className={`text-2xl font-bold text-gray-900 ${titillium.className}`}>Course Materials</h2>
+                    <p className={`text-gray-500 text-sm mt-1 ${outfit.className}`}>All additional resources and materials.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                        setUploadType('lecture_slide');
+                        setIsUploadModalOpen(true);
+                    }}
+                    className={`flex-shrink-0 flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 focus:ring-4 focus:ring-green-200 px-5 py-2.5 rounded-xl font-semibold transition-all ${outfit.className}`}
+                  >
+                    <FileUp className="w-4 h-4" /> Upload Material
+                  </button>
+                </div>
+
+                {(!course.course_materials || course.course_materials.length === 0 || (course.course_materials.length === 1 && course.course_materials[0].material_type === 'primary_slide')) ? (
+                  <div className="text-center py-16 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
+                    <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className={`text-gray-500 font-medium ${outfit.className}`}>No additional materials uploaded yet.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {course.course_materials.filter(mat => mat.material_type !== 'primary_slide').map((mat) => (
+                      <div key={mat.id} className="p-4 rounded-xl border border-gray-200 hover:border-green-200 hover:shadow-md transition-all bg-white flex items-start gap-4">
+                         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                           <FileText className="w-6 h-6" />
+                         </div>
+                         <div className="flex-1 min-w-0">
+                           <p className={`font-bold text-gray-900 line-clamp-1 ${outfit.className}`} title={mat.title}>{mat.title}</p>
+                           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
+                             <p className={`text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md inline-block uppercase tracking-wider ${outfit.className}`}>{mat.material_type.replace('_', ' ')}</p>
+                             {renderStatusBadge(mat.id)}
+                           </div>
+                         </div>
+                         <div className="flex items-center gap-1">
+                           <a href={mat.file_url} target="_blank" rel="noreferrer" className="text-gray-400 hover:text-green-600 transition-colors p-2">
+                              <UploadCloud className="w-5 h-5 rotate-180" />
+                           </a>
+                           <button
+                             onClick={() => handleDeleteMaterial(mat)}
+                             disabled={deletingMaterialId === mat.id}
+                             className="text-gray-400 hover:text-red-600 transition-colors p-2 disabled:opacity-60"
+                           >
+                             <Trash2 className="w-5 h-5" />
+                           </button>
+                         </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
@@ -792,7 +1245,7 @@ export default function CourseDashboardPage({
                   onChange={(e) => setUploadType(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none bg-white text-gray-900"
                 >
-                  <option value="primary_slide" className="text-gray-900">Primary Course Slide / Syllabus</option>
+                  
                   <option value="lecture_slide" className="text-gray-900">Lecture Slide</option>
                   <option value="textbook" className="text-gray-900">Textbook</option>
                   <option value="past_question" className="text-gray-900">Past Question / Exam</option>
@@ -814,7 +1267,7 @@ export default function CourseDashboardPage({
                 ) : (
                   <>
                     <FileUp className="w-5 h-5" />
-                    Upload and Process
+                    Upload and Queue Processing
                   </>
                 )}
               </button>
@@ -864,3 +1317,4 @@ function SidebarButton({
     </button>
   );
 }
+
