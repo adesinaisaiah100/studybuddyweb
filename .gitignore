@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local debug / scratch artifacts
+build_output*.txt
+full_page.txt
+npm-err.txt
+npm_error.log
+ts-err.txt
+patch2.py
+patch_page.py
+patch_page.js
+patch_upload.js

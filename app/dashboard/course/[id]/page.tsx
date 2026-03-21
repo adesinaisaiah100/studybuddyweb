@@ -1035,7 +1035,7 @@ export default function CourseDashboardPage({
                     </h3>
 
                     {course.course_schedules && course.course_schedules.length > 0 ? (
-                      <div className="flex flex-wrap gap-3 lg:justify-end">
+                      <div className="flex  flex-row gap-3 lg:justify-end">
                         {course.course_schedules.map((slot) => (
                           <div
                             key={slot.id}
