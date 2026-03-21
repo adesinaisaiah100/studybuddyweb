@@ -27,6 +27,13 @@ type ResourceRow = {
   metadata?: Record<string, unknown>;
 };
 
+type ResourceAgentResult = {
+  rows: ResourceRow[];
+  status: string;
+};
+
+const MIN_RESOURCES_PER_MODULE = 5;
+
 function slugify(input: string) {
   return input
     .toLowerCase()
@@ -47,6 +54,118 @@ function normalizeUrl(url: string) {
   }
 }
 
+function normalizeText(value: string) {
+  return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function hasGrounding(sourceText: string, candidate: string) {
+  const normalizedSource = normalizeText(sourceText);
+  const normalizedCandidate = normalizeText(candidate);
+  if (!normalizedCandidate) return false;
+
+  if (normalizedSource.includes(normalizedCandidate)) return true;
+
+  const candidateTokens = normalizedCandidate
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 4);
+
+  if (candidateTokens.length === 0) return false;
+
+  const matched = candidateTokens.filter((token) => normalizedSource.includes(token)).length;
+  return matched / candidateTokens.length >= 0.6;
+}
+
+function deriveGroundedKeywords(sourceText: string, title: string, existingKeywords: string[]) {
+  const grounded = existingKeywords
+    .map((keyword) => keyword.trim())
+    .filter((keyword) => keyword.length >= 3)
+    .filter((keyword) => hasGrounding(sourceText, keyword));
+
+  if (grounded.length >= 2) return grounded.slice(0, 8);
+
+  const titleTokens = title
+    .split(/[^a-zA-Z0-9]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length >= 4)
+    .filter((token) => hasGrounding(sourceText, token));
+
+  const merged = Array.from(new Set([...grounded, ...titleTokens]));
+  return merged.slice(0, 8);
+}
+
+function enforceGroundedOutline(sourceText: string, outline: CourseOutline): CourseOutline {
+  const groundedModules = outline.modules
+    .filter((module) => hasGrounding(sourceText, module.title))
+    .map((module) => {
+      const safeSummary = hasGrounding(sourceText, module.summary)
+        ? module.summary
+        : `Extracted module from uploaded text: ${module.title}`;
+      const safeKeywords = deriveGroundedKeywords(sourceText, module.title, module.keywords);
+
+      return {
+        title: module.title,
+        summary: safeSummary,
+        keywords:
+          safeKeywords.length >= 2
+            ? safeKeywords
+            : [module.title.split(" ")[0] || "module", "course"],
+      };
+    });
+
+  const normalizedTitle = hasGrounding(sourceText, outline.courseTitle)
+    ? outline.courseTitle
+    : "Extracted Course Outline";
+  const normalizedOverview = hasGrounding(sourceText, outline.overview)
+    ? outline.overview
+    : "Structured from uploaded course material text.";
+
+  if (groundedModules.length >= 2) {
+    return {
+      courseTitle: normalizedTitle,
+      overview: normalizedOverview,
+      modules: groundedModules.slice(0, 12),
+    };
+  }
+
+  const fallbackLines = sourceText
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length >= 8)
+    .filter((line) => /module|week|unit|chapter|lesson|topic|^\d+[.)\-\s]/i.test(line))
+    .slice(0, 12);
+
+  const fallbackModules = fallbackLines.slice(0, 12).map((line, index) => ({
+    title: line.slice(0, 120),
+    summary: `Extracted from uploaded text section ${index + 1}.`,
+    keywords: deriveGroundedKeywords(sourceText, line, []).slice(0, 8),
+  }));
+
+  const minSafeModules = fallbackModules.length >= 2
+    ? fallbackModules
+    : [
+        {
+          title: "Module 1",
+          summary: "Extracted from uploaded text.",
+          keywords: ["module", "course"],
+        },
+        {
+          title: "Module 2",
+          summary: "Extracted from uploaded text.",
+          keywords: ["module", "course"],
+        },
+      ];
+
+  return {
+    courseTitle: normalizedTitle,
+    overview: normalizedOverview,
+    modules: minSafeModules.map((module) => ({
+      ...module,
+      keywords: module.keywords.length >= 2 ? module.keywords : ["module", "course"],
+    })),
+  };
+}
+
 function scoreResource(moduleTitle: string, keywords: string[], title: string, url: string) {
   const hay = `${title} ${url}`.toLowerCase();
   let score = 0;
@@ -64,49 +183,56 @@ function scoreResource(moduleTitle: string, keywords: string[], title: string, u
   return score;
 }
 
-async function searchWeb(moduleTitle: string, keywords: string[]) {
-  const query = `${moduleTitle} ${keywords.slice(0, 3).join(" ")} lecture notes textbook syllabus`;
-  const response = await fetch(
-    `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&no_redirect=1`
-  );
+async function searchWebWithTavily(query: string): Promise<Array<{ title: string; url: string; source: string }>> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) return [];
 
-  if (!response.ok) return [] as ResourceRow[];
-  const json = await response.json();
+  const response = await fetch("https://api.tavily.com/search", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      api_key: apiKey,
+      query,
+      max_results: 10,
+      search_depth: "advanced",
+      include_answer: false,
+      include_raw_content: false,
+    }),
+  });
 
-  const rows: ResourceRow[] = [];
+  if (!response.ok) return [];
+  const payload = await response.json();
+  const results = Array.isArray(payload?.results) ? payload.results : [];
 
-  if (json?.AbstractURL && json?.AbstractText) {
-    rows.push({
-      module_slug: slugify(moduleTitle),
-      module_title: moduleTitle,
-      resource_type: "web",
-      title: json.Heading || moduleTitle,
-      url: json.AbstractURL,
-      source: "duckduckgo-abstract",
-      score: scoreResource(moduleTitle, keywords, json.Heading || moduleTitle, json.AbstractURL),
-    });
-  }
-
-  const related = Array.isArray(json?.RelatedTopics) ? json.RelatedTopics : [];
-  for (const entry of related) {
-    const topic = entry?.FirstURL ? entry : null;
-    if (!topic?.FirstURL || !topic?.Text) continue;
-
-    rows.push({
-      module_slug: slugify(moduleTitle),
-      module_title: moduleTitle,
-      resource_type: "web",
-      title: topic.Text.split(" - ")[0] || topic.Text,
-      url: topic.FirstURL,
-      source: "duckduckgo-related",
-      score: scoreResource(moduleTitle, keywords, topic.Text, topic.FirstURL),
-    });
-  }
-
-  return rows;
+  return results
+    .map((entry: { title?: string; url?: string }) => ({
+      title: entry?.title?.trim() || "Web Resource",
+      url: entry?.url?.trim() || "",
+      source: "tavily-search",
+    }))
+    .filter((entry: { title: string; url: string; source: string }) => Boolean(entry.url));
 }
 
-function dedupeAndRank(rows: ResourceRow[]) {
+async function searchWikipedia(query: string): Promise<Array<{ title: string; url: string; source: string }>> {
+  const response = await fetch(
+    `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`
+  );
+
+  if (!response.ok) return [];
+  const payload = await response.json();
+  const results = Array.isArray(payload?.query?.search) ? payload.query.search : [];
+
+  return results.slice(0, 8).map((entry: { title?: string }) => {
+    const title = entry?.title?.trim() || "Wikipedia Topic";
+    return {
+      title,
+      url: `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/\s+/g, "_"))}`,
+      source: "wikipedia-search",
+    };
+  });
+}
+
+function dedupeAndRank(rows: ResourceRow[], limit = 8) {
   const map = new Map<string, ResourceRow>();
 
   for (const row of rows) {
@@ -120,7 +246,136 @@ function dedupeAndRank(rows: ResourceRow[]) {
 
   return Array.from(map.values())
     .sort((a, b) => b.score - a.score)
-    .slice(0, 8);
+    .slice(0, limit);
+}
+
+function deriveKeywordsFromTitle(moduleTitle: string) {
+  return moduleTitle
+    .split(/[^a-zA-Z0-9]+/)
+    .map((part) => part.trim().toLowerCase())
+    .filter((part) => part.length >= 4)
+    .slice(0, 5);
+}
+
+async function youtubeResourcesForModule(
+  courseTitle: string,
+  moduleTitle: string,
+  keywords: string[],
+  minimumResults = MIN_RESOURCES_PER_MODULE
+) {
+  const provider = createYouTubeProvider();
+  const moduleKeywords = keywords.length > 0 ? keywords : deriveKeywordsFromTitle(moduleTitle);
+
+  const queryVariants = [
+    `${courseTitle} ${moduleTitle} lecture`,
+    `${moduleTitle} tutorial ${moduleKeywords.slice(0, 2).join(" ")}`,
+    `${moduleTitle} full course class`,
+  ];
+
+  const collected: ResourceRow[] = [];
+
+  for (const query of queryVariants) {
+    const results = await provider.search(query, 10);
+    for (const video of results) {
+      collected.push({
+        module_slug: slugify(moduleTitle),
+        module_title: moduleTitle,
+        resource_type: "youtube",
+        title: video.title,
+        url: video.url,
+        source: "youtube-api",
+        score: scoreResource(moduleTitle, moduleKeywords, video.title, video.url),
+        metadata: {
+          channelTitle: video.channelTitle,
+          publishedAt: video.publishedAt,
+        },
+      });
+    }
+
+    if (dedupeAndRank(collected, minimumResults).length >= minimumResults) break;
+  }
+
+  const ranked = dedupeAndRank(collected, 12);
+  if (ranked.length >= minimumResults) {
+    return ranked.slice(0, minimumResults);
+  }
+
+  const fallbackRows = queryVariants.map((query, index) => ({
+    module_slug: slugify(moduleTitle),
+    module_title: moduleTitle,
+    resource_type: "youtube" as const,
+    title: `${moduleTitle} YouTube Search ${index + 1}`,
+    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
+    source: "youtube-search-fallback",
+    score: scoreResource(moduleTitle, moduleKeywords, query, query),
+  }));
+
+  return dedupeAndRank([...ranked, ...fallbackRows], minimumResults).slice(0, minimumResults);
+}
+
+async function webResourcesForModule(
+  moduleTitle: string,
+  keywords: string[],
+  minimumResults = MIN_RESOURCES_PER_MODULE
+) {
+  const moduleKeywords = keywords.length > 0 ? keywords : deriveKeywordsFromTitle(moduleTitle);
+  const queryVariants = [
+    `${moduleTitle} ${moduleKeywords.slice(0, 3).join(" ")} lecture notes textbook`,
+    `${moduleTitle} syllabus study guide university`,
+    `${moduleTitle} open courseware pdf`,
+  ];
+
+  const collected: ResourceRow[] = [];
+  let providerStatus = process.env.TAVILY_API_KEY ? "enabled_tavily" : "fallback_wikipedia";
+
+  for (const query of queryVariants) {
+    const tavilyRows = await searchWebWithTavily(query);
+    const wikiRows = tavilyRows.length > 0 ? [] : await searchWikipedia(query);
+
+    if (tavilyRows.length === 0 && wikiRows.length > 0) {
+      providerStatus = "fallback_wikipedia";
+    }
+
+    const rows = [...tavilyRows, ...wikiRows].map((entry) => ({
+      module_slug: slugify(moduleTitle),
+      module_title: moduleTitle,
+      resource_type: "web" as const,
+      title: entry.title,
+      url: entry.url,
+      source: entry.source,
+      score: scoreResource(moduleTitle, moduleKeywords, entry.title, entry.url),
+    }));
+
+    collected.push(...rows);
+
+    if (dedupeAndRank(collected, minimumResults).length >= minimumResults) break;
+  }
+
+  const ranked = dedupeAndRank(collected, 12);
+  if (ranked.length >= minimumResults) {
+    return { rows: ranked.slice(0, minimumResults), status: providerStatus };
+  }
+
+  const fallbackRows: ResourceRow[] = [
+    `site:ocw.mit.edu ${moduleTitle}`,
+    `site:openstax.org ${moduleTitle}`,
+    `site:wikipedia.org ${moduleTitle}`,
+    `site:coursera.org ${moduleTitle}`,
+    `site:edx.org ${moduleTitle}`,
+  ].map((query, index) => ({
+    module_slug: slugify(moduleTitle),
+    module_title: moduleTitle,
+    resource_type: "web",
+    title: `${moduleTitle} Study Resource ${index + 1}`,
+    url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+    source: "web-search-fallback",
+    score: scoreResource(moduleTitle, moduleKeywords, query, query),
+  }));
+
+  return {
+    rows: dedupeAndRank([...ranked, ...fallbackRows], minimumResults).slice(0, minimumResults),
+    status: providerStatus,
+  };
 }
 
 async function buildOutlineFromText(previewText: string): Promise<CourseOutline> {
@@ -140,17 +395,116 @@ async function buildOutlineFromText(previewText: string): Promise<CourseOutline>
 
   const structured = model.withStructuredOutput(OutlineSchema);
 
-  return await structured.invoke([
+  const extracted = await structured.invoke([
     {
       role: "system",
       content:
-        "You are a strict curriculum structuring engine. Return only valid structured JSON matching schema. Build a practical course outline from the provided first pages of syllabus/outline text.",
+        "You are an extraction-only curriculum structuring engine. Return only valid JSON matching schema. Do NOT invent modules, topics, summaries, or keywords. Use only facts present in the uploaded text. If information is missing, keep wording conservative and generic.",
     },
     {
       role: "user",
-      content: `Create a compact course outline from this text:\n\n${previewText}`,
+      content: `Extract the existing course outline from this uploaded text and format it to schema:\n\n${previewText}`,
     },
   ]);
+
+  return enforceGroundedOutline(previewText, extracted);
+}
+
+async function outlineExtractionAgent(previewText: string): Promise<CourseOutline> {
+  return buildOutlineFromText(previewText);
+}
+
+async function youtubeResourcesAgent(outline: CourseOutline): Promise<ResourceAgentResult> {
+  try {
+    const youtubeRows: ResourceRow[] = [];
+
+    for (const unit of outline.modules) {
+      const moduleRows = await youtubeResourcesForModule(
+        outline.courseTitle,
+        unit.title,
+        unit.keywords,
+        MIN_RESOURCES_PER_MODULE
+      );
+      youtubeRows.push(...moduleRows);
+    }
+
+    return {
+      rows: dedupeAndRank(youtubeRows, outline.modules.length * MIN_RESOURCES_PER_MODULE),
+      status: process.env.YOUTUBE_API_KEY ? "enabled" : "disabled_no_api_key",
+    };
+  } catch (error) {
+    console.error("[outline-resources] youtubeResourcesAgent failed", (error as Error).message);
+    return { rows: [], status: "error" };
+  }
+}
+
+async function webResourcesAgent(outline: CourseOutline): Promise<ResourceAgentResult> {
+  try {
+    const webRows: ResourceRow[] = [];
+    const statuses = new Set<string>();
+    for (const unit of outline.modules) {
+      const moduleWeb = await webResourcesForModule(
+        unit.title,
+        unit.keywords,
+        MIN_RESOURCES_PER_MODULE
+      );
+      webRows.push(...moduleWeb.rows);
+      statuses.add(moduleWeb.status);
+    }
+
+    return {
+      rows: dedupeAndRank(webRows, outline.modules.length * MIN_RESOURCES_PER_MODULE),
+      status: Array.from(statuses).join("|") || "unknown",
+    };
+  } catch (error) {
+    console.error("[outline-resources] webResourcesAgent failed", (error as Error).message);
+    return { rows: [], status: "error" };
+  }
+}
+
+export async function generateResourcesForModule(input: {
+  courseTitle: string;
+  moduleTitle: string;
+  keywords?: string[];
+}) {
+  const keywords = (input.keywords || []).filter((keyword) => keyword.trim().length >= 2);
+
+  const [youtubeRows, webResult] = await Promise.all([
+    youtubeResourcesForModule(
+      input.courseTitle,
+      input.moduleTitle,
+      keywords,
+      MIN_RESOURCES_PER_MODULE
+    ),
+    webResourcesForModule(input.moduleTitle, keywords, MIN_RESOURCES_PER_MODULE),
+  ]);
+
+  return {
+    moduleSlug: slugify(input.moduleTitle),
+    youtube: youtubeRows,
+    web: webResult.rows,
+    youtubeStatus: process.env.YOUTUBE_API_KEY ? "enabled" : "disabled_no_api_key",
+    webStatus: webResult.status,
+  };
+}
+
+async function orchestrateOutlineAndResources(previewText: string) {
+  const outline = await outlineExtractionAgent(previewText);
+
+  const [webResult, youtubeResult] = await Promise.all([
+    webResourcesAgent(outline),
+    youtubeResourcesAgent(outline),
+  ]);
+
+  return {
+    outline,
+    resources: {
+      web: webResult.rows,
+      youtube: youtubeResult.rows,
+      youtubeStatus: youtubeResult.status,
+      webStatus: webResult.status,
+    },
+  };
 }
 
 export async function generateOutlineAndResources(previewText: string) {
@@ -158,41 +512,5 @@ export async function generateOutlineAndResources(previewText: string) {
     throw new Error("Preview text is empty for outline generation.");
   }
 
-  const outline = await buildOutlineFromText(previewText);
-
-  const webRows: ResourceRow[] = [];
-  const youtubeRows: ResourceRow[] = [];
-  const youtubeProvider = createYouTubeProvider();
-
-  for (const unit of outline.modules) {
-    const moduleWeb = await searchWeb(unit.title, unit.keywords);
-    webRows.push(...moduleWeb);
-
-    const yt = await youtubeProvider.search(`${outline.courseTitle} ${unit.title} lecture`, 3);
-    for (const video of yt) {
-      youtubeRows.push({
-        module_slug: slugify(unit.title),
-        module_title: unit.title,
-        resource_type: "youtube",
-        title: video.title,
-        url: video.url,
-        source: "youtube-api",
-        score: scoreResource(unit.title, unit.keywords, video.title, video.url),
-        metadata: {
-          channelTitle: video.channelTitle,
-          publishedAt: video.publishedAt,
-        },
-      });
-    }
-  }
-
-  return {
-    outline,
-    resources: {
-      web: dedupeAndRank(webRows),
-      youtube: dedupeAndRank(youtubeRows),
-      youtubeStatus: process.env.YOUTUBE_API_KEY ? "enabled" : "disabled_no_api_key",
-      webStatus: "enabled_duckduckgo",
-    },
-  };
+  return orchestrateOutlineAndResources(previewText);
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { processMaterialToEmbeddings } from "@/lib/ai/process-material";
-import { generateOutlineAndResources } from "@/lib/ai/outline-resources";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -143,55 +142,8 @@ export async function POST() {
       .eq("user_id", user.id);
 
     try {
-      if (typedJob.material_type === "primary_slide" && typedJob.raw_text?.trim()) {
-        try {
-          const generated = await generateOutlineAndResources(typedJob.raw_text);
-
-          const { data: outlineRow, error: outlineUpsertError } = await supabase
-            .from("course_outlines")
-            .upsert(
-              {
-                course_id: typedJob.course_id,
-                material_id: typedJob.material_id,
-                status: "ready",
-                outline_json: generated.outline,
-                youtube_status: generated.resources.youtubeStatus,
-                web_status: generated.resources.webStatus,
-                generated_at: new Date().toISOString(),
-              },
-              { onConflict: "course_id" }
-            )
-            .select("id")
-            .single();
-
-          if (!outlineUpsertError && outlineRow?.id) {
-            await supabase.from("course_module_resources").delete().eq("outline_id", outlineRow.id);
-
-            const resourceRows = [...generated.resources.web, ...generated.resources.youtube].map((resource) => ({
-              outline_id: outlineRow.id,
-              module_slug: resource.module_slug,
-              module_title: resource.module_title,
-              resource_type: resource.resource_type,
-              title: resource.title,
-              url: resource.url,
-              source: resource.source,
-              score: resource.score,
-              metadata: resource.metadata ?? null,
-            }));
-
-            if (resourceRows.length > 0) {
-              await supabase.from("course_module_resources").insert(resourceRows);
-            }
-          }
-        } catch (outlineError) {
-          console.error("[process-jobs/run-next] Outline generation failed", {
-            jobId: typedJob.id,
-            materialId: typedJob.material_id,
-            courseId: typedJob.course_id,
-            error: (outlineError as Error).message,
-          });
-        }
-      }
+      // Outline/module resource generation is now driven by manual module submissions
+      // via POST /api/course-outline. Background jobs only process embeddings.
 
       const reused = await tryReuseCachedEmbeddings(supabase, typedJob);
 
