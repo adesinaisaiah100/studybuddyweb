@@ -103,6 +103,19 @@ type ModuleResource = {
   score: number;
 };
 
+type UploadStage = "extracting" | "uploading" | "queued" | "vectorizing" | "ready";
+
+type MaterialUploadTracker = {
+  title: string;
+  materialId: string | null;
+  stage: UploadStage;
+};
+
+type DeleteIntent =
+  | { kind: "course" }
+  | { kind: "schedule"; scheduleId: string }
+  | { kind: "material"; material: CourseMaterial };
+
 const statusClassMap: Record<ProcessingJob["status"], string> = {
   queued: "bg-amber-50 text-amber-700 border border-amber-200",
   extracting: "bg-blue-50 text-blue-700 border border-blue-200",
@@ -117,6 +130,14 @@ const statusLabelMap: Record<ProcessingJob["status"], string> = {
   vectorizing: "Vectorizing",
   completed: "Ready",
   failed: "Failed",
+};
+
+const uploadStageLabelMap: Record<UploadStage, string> = {
+  extracting: "Extracting",
+  uploading: "Uploading",
+  queued: "Queued",
+  vectorizing: "Vectorizing",
+  ready: "Ready",
 };
 
 export default function CourseDashboardPage({
@@ -151,7 +172,16 @@ export default function CourseDashboardPage({
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
+  const [materialUploadTracker, setMaterialUploadTracker] = useState<MaterialUploadTracker | null>(null);
+  const [manualModuleTitle, setManualModuleTitle] = useState("");
+  const [manualModuleSummary, setManualModuleSummary] = useState("");
+  const [manualModuleKeywords, setManualModuleKeywords] = useState("");
+  const [isSavingManualModule, setIsSavingManualModule] = useState(false);
   const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null);
+
+  // Delete confirmation modal
+  const [deleteIntent, setDeleteIntent] = useState<DeleteIntent | null>(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const fetcher = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -266,6 +296,64 @@ export default function CourseDashboardPage({
     );
   };
 
+  const isMaterialProcessingInBackground = (materialId: string) => {
+    const job = getJobForMaterial(materialId);
+    const fromJob = !!job && ["queued", "extracting", "vectorizing"].includes(job.status);
+    const fromLocalTracker =
+      materialUploadTracker?.materialId === materialId && materialUploadTracker.stage !== "ready";
+
+    return fromJob || fromLocalTracker;
+  };
+
+  const renderInlineUploadProgressCard = () => {
+    if (!materialUploadTracker) return null;
+
+    return (
+      <div className="mb-4 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Loader2 className="w-3.5 h-3.5 text-gray-500 animate-spin" />
+          <p className={`text-xs text-gray-700 truncate ${outfit.className}`} title={materialUploadTracker.title}>
+            {materialUploadTracker.title}
+          </p>
+        </div>
+        <span className={`text-[10px] font-semibold uppercase tracking-wider text-gray-600 ${outfit.className}`}>
+          {uploadStageLabelMap[materialUploadTracker.stage]}
+        </span>
+      </div>
+    );
+  };
+
+  useEffect(() => {
+    if (!materialUploadTracker?.materialId) return;
+
+    const job = jobsByMaterialId.get(materialUploadTracker.materialId);
+    if (!job) return;
+
+    let nextStage: UploadStage | null = null;
+
+    if (job.status === "queued") nextStage = "queued";
+    if (job.status === "extracting") nextStage = "extracting";
+    if (job.status === "vectorizing") nextStage = "vectorizing";
+    if (job.status === "completed") nextStage = "ready";
+
+    if (!nextStage) return;
+
+    setMaterialUploadTracker((prev) => {
+      if (!prev || prev.stage === nextStage) return prev;
+      return { ...prev, stage: nextStage };
+    });
+  }, [jobsByMaterialId, materialUploadTracker?.materialId]);
+
+  useEffect(() => {
+    if (materialUploadTracker?.stage !== "ready") return;
+
+    const timer = setTimeout(() => {
+      setMaterialUploadTracker(null);
+    }, 4000);
+
+    return () => clearTimeout(timer);
+  }, [materialUploadTracker?.stage]);
+
   // Sync editing fields with course data
   useEffect(() => {
     if (course && !editCode) {
@@ -298,7 +386,6 @@ export default function CourseDashboardPage({
 
   const handleDelete = async () => {
     if (!course) return;
-    if (!confirm("Are you sure you want to delete this course? This action cannot be undone.")) return;
 
     setIsDeleting(true);
     const { error } = await supabase.from("courses").delete().eq("id", course.id);
@@ -347,7 +434,6 @@ export default function CourseDashboardPage({
   };
 
   const handleDeleteSchedule = async (scheduleId: string) => {
-    if (!confirm("Remove this schedule?")) return;
     const { error } = await supabase.from("course_schedules").delete().eq("id", scheduleId);
     if (!error) await mutate();
   };
@@ -384,7 +470,6 @@ export default function CourseDashboardPage({
 
   const handleDeleteMaterial = async (material: CourseMaterial) => {
     if (!course) return;
-    if (!confirm("Delete this uploaded material?")) return;
 
     setDeletingMaterialId(material.id);
 
@@ -396,6 +481,10 @@ export default function CourseDashboardPage({
 
       await supabase.from("course_embeddings").delete().eq("material_id", material.id);
       await supabase.from("processing_jobs").delete().eq("material_id", material.id);
+
+      if (material.material_type === "primary_slide") {
+        await supabase.from("course_outlines").delete().eq("course_id", course.id);
+      }
 
       const { error: deleteError } = await supabase
         .from("course_materials")
@@ -418,22 +507,108 @@ export default function CourseDashboardPage({
     }
   };
 
+  const requestDeleteCourse = () => {
+    setDeleteIntent({ kind: "course" });
+  };
+
+  const requestDeleteSchedule = (scheduleId: string) => {
+    setDeleteIntent({ kind: "schedule", scheduleId });
+  };
+
+  const requestDeleteMaterial = (material: CourseMaterial) => {
+    setDeleteIntent({ kind: "material", material });
+  };
+
+  const confirmDeleteIntent = async () => {
+    if (!deleteIntent) return;
+
+    setIsConfirmingDelete(true);
+    try {
+      if (deleteIntent.kind === "course") {
+        await handleDelete();
+      }
+
+      if (deleteIntent.kind === "schedule") {
+        await handleDeleteSchedule(deleteIntent.scheduleId);
+      }
+
+      if (deleteIntent.kind === "material") {
+        await handleDeleteMaterial(deleteIntent.material);
+      }
+
+      setDeleteIntent(null);
+    } finally {
+      setIsConfirmingDelete(false);
+    }
+  };
+
+  const handleSaveManualModule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualModuleTitle.trim()) return;
+
+    setIsSavingManualModule(true);
+    try {
+      const keywords = manualModuleKeywords
+        .split(",")
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0)
+        .slice(0, 8);
+
+      const response = await fetch("/api/course-outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId: course?.id,
+          moduleTitle: manualModuleTitle.trim(),
+          moduleSummary: manualModuleSummary.trim(),
+          keywords,
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload?.error || "Failed to add module.");
+      }
+
+      setManualModuleTitle("");
+      setManualModuleSummary("");
+      setManualModuleKeywords("");
+      await mutateOutline();
+    } catch (error) {
+      alert((error as Error).message || "Failed to add module.");
+    } finally {
+      setIsSavingManualModule(false);
+    }
+  };
+
   const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadFile) return alert("Please select a file.");
 
-    setIsUploading(true);
     const selectedFile = uploadFile;
     const selectedTitle = uploadTitle.trim();
     const selectedType = uploadType;
+
+    setIsUploadModalOpen(false);
+    setUploadFile(null);
+    setUploadTitle("");
+    setUploadType("primary_slide");
+    setIsUploading(true);
+    setMaterialUploadTracker({
+      title: selectedTitle || selectedFile.name,
+      materialId: null,
+      stage: "extracting",
+    });
     
     try {
       // 1. Fast preview extraction (first pages / first chunk)
-      setUploadProgress("Extracting preview pages...");
+      setUploadProgress("Extracting");
+      setMaterialUploadTracker((prev) => (prev ? { ...prev, stage: "extracting" } : prev));
       const previewText = await extractTextFromFile(
         selectedFile,
         () => {
-          setUploadProgress("Extracting preview pages...");
+          setUploadProgress("Extracting");
+          setMaterialUploadTracker((prev) => (prev ? { ...prev, stage: "extracting" } : prev));
         },
         { pass: "preview" }
       );
@@ -441,17 +616,14 @@ export default function CourseDashboardPage({
       if (!previewText || previewText.trim() === "") {
         alert("Could not extract any text from this document. Please ensure it is a valid class material.");
         setIsUploading(false);
-        setUploadProgress("");
+        setMaterialUploadTracker(null);
         return;
       }
 
       // 2. Upload file to Supabase Storage
       const isPrimarySlide = selectedType === "primary_slide";
-      setUploadProgress(
-        isPrimarySlide
-          ? "Uploading original file to cloud..."
-          : "Uploading extracted text to cloud..."
-      );
+      setUploadProgress("Uploading");
+      setMaterialUploadTracker((prev) => (prev ? { ...prev, stage: "uploading" } : prev));
 
       const {
         data: { user },
@@ -460,7 +632,7 @@ export default function CourseDashboardPage({
       if (!user) {
         alert("You must be logged in to upload materials.");
         setIsUploading(false);
-        setUploadProgress("");
+        setMaterialUploadTracker(null);
         return;
       }
 
@@ -485,7 +657,7 @@ export default function CourseDashboardPage({
       if (uploadError) {
         alert("Error uploading file: " + uploadError.message);
         setIsUploading(false);
-        setUploadProgress("");
+        setMaterialUploadTracker(null);
         return;
       }
 
@@ -495,7 +667,7 @@ export default function CourseDashboardPage({
         .getPublicUrl(filePath);
 
       // 4. Insert record into course_materials table
-      setUploadProgress("Saving material data...");
+      setUploadProgress("Uploading");
       const { data: newMaterial, error: dbError } = await supabase
         .from('course_materials')
         .insert({
@@ -509,7 +681,18 @@ export default function CourseDashboardPage({
 
       if (dbError || !newMaterial) {
         alert("Error saving material info: " + (dbError?.message || 'Unknown error'));
+        setMaterialUploadTracker(null);
       } else {
+        setMaterialUploadTracker((prev) =>
+          prev
+            ? {
+                ...prev,
+                materialId: newMaterial.id,
+                title: newMaterial.title,
+              }
+            : prev
+        );
+
         const enqueueJob = async (rawText: string) => {
           const textBytes = new TextEncoder().encode(rawText);
           const hashBuffer = await crypto.subtle.digest("SHA-256", textBytes);
@@ -539,7 +722,8 @@ export default function CourseDashboardPage({
         };
 
         // 5. Enqueue preview payload first for fast outline context
-        setUploadProgress("Queuing quick analysis...");
+        setUploadProgress("Queued");
+        setMaterialUploadTracker((prev) => (prev ? { ...prev, stage: "queued" } : prev));
         try {
           const quickQueued = await enqueueJob(previewText);
 
@@ -576,7 +760,7 @@ export default function CourseDashboardPage({
           }
         })();
 
-        setUploadProgress("Uploaded. Processing in background...");
+  setUploadProgress("Queued");
         // Refresh UI to show the new material
         await mutate();
         await mutateJobs();
@@ -585,13 +769,9 @@ export default function CourseDashboardPage({
     } catch (error) {
       console.error(error);
       alert("An unexpected error occurred during upload.");
+      setMaterialUploadTracker(null);
     } finally {
       setIsUploading(false);
-      setUploadProgress("");
-      setIsUploadModalOpen(false);
-      setUploadFile(null);
-      setUploadTitle("");
-      setUploadType("primary_slide");
     }
   };
 
@@ -766,7 +946,7 @@ export default function CourseDashboardPage({
                         Permanently remove this course and all associated data, including schedules, notes, and progress.
                       </p>
                       <button
-                        onClick={handleDelete}
+                        onClick={requestDeleteCourse}
                         disabled={isDeleting}
                         className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-red-600 border border-red-200 hover:bg-red-50 font-medium transition-colors disabled:opacity-50"
                       >
@@ -812,7 +992,7 @@ export default function CourseDashboardPage({
                               <button onClick={() => openEditScheduleModal(slot)} className="text-gray-400 hover:text-blue-500">
                                 <Edit2 className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleDeleteSchedule(slot.id)} className="text-gray-400 hover:text-red-500">
+                              <button onClick={() => requestDeleteSchedule(slot.id)} className="text-gray-400 hover:text-red-500">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -844,11 +1024,38 @@ export default function CourseDashboardPage({
                 <p className={`text-sm font-semibold text-green-600 tracking-wider uppercase mb-2 ${outfit.className}`}>
                   {course.code}
                 </p>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
                   <h1 className={`text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight ${titillium.className}`}>
                     {course.title}
                   </h1>
+
+                  <div className="lg:w-[360px] lg:flex-shrink-0">
+                    <h3 className={`text-lg font-bold text-gray-900 mb-3 flex items-center gap-2 ${titillium.className}`}>
+                      <Calendar className="w-5 h-5 text-gray-400" /> Upcoming Classes
+                    </h3>
+
+                    {course.course_schedules && course.course_schedules.length > 0 ? (
+                      <div className="flex flex-wrap gap-3 lg:justify-end">
+                        {course.course_schedules.map((slot) => (
+                          <div
+                            key={slot.id}
+                            className={`bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 ${outfit.className}`}
+                          >
+                            <Clock className="w-4 h-4 text-green-600" />
+                            <div>
+                              <p className="font-semibold text-gray-900 text-sm leading-none">{slot.day}</p>
+                              <p className="text-gray-500 text-xs mt-1">{slot.time_slot}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className={`text-gray-500 text-sm lg:text-right ${outfit.className}`}>No schedules added.</p>
+                    )}
+                  </div>
                 </div>
+
+                {renderInlineUploadProgressCard()}
 
                 {(!course.course_materials || !course.course_materials.find(m => m.material_type === 'primary_slide')) ? (
                   <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-3xl p-8 sm:p-12 flex flex-col items-center justify-center text-center mb-8">
@@ -907,6 +1114,11 @@ export default function CourseDashboardPage({
                             <div className="flex items-center gap-2 mt-0.5">
                               <p className={`text-sm text-gray-500 font-medium tracking-wide ${outfit.className}`}>Primary File</p>
                               {renderStatusBadge(mat.id)}
+                              {isMaterialProcessingInBackground(mat.id) && (
+                                <span className={`text-[10px] text-gray-500 ${outfit.className}`}>
+                                  Processing in background…
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -915,7 +1127,7 @@ export default function CourseDashboardPage({
                             View File
                           </a>
                           <button
-                            onClick={() => handleDeleteMaterial(mat)}
+                            onClick={() => requestDeleteMaterial(mat)}
                             disabled={deletingMaterialId === mat.id}
                             className="text-sm font-semibold text-red-600 hover:text-red-700 bg-white px-3 py-2 border border-red-200 rounded-lg shadow-sm hover:shadow transition-all disabled:opacity-60"
                           >
@@ -950,6 +1162,52 @@ export default function CourseDashboardPage({
                     </div>
                   </div>
                 )}
+
+                <div className="mb-8 rounded-2xl border border-gray-200 bg-white p-5">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <h3 className={`text-lg font-bold text-gray-900 ${titillium.className}`}>
+                      Add Module Manually
+                    </h3>
+                    <span className={`text-xs text-gray-500 ${outfit.className}`}>
+                      Fetches 5+ YouTube and 5+ web resources per module
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleSaveManualModule} className={`space-y-3 ${outfit.className}`}>
+                    <input
+                      type="text"
+                      required
+                      value={manualModuleTitle}
+                      onChange={(e) => setManualModuleTitle(e.target.value)}
+                      placeholder="Module title (e.g. Neural Networks Fundamentals)"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none text-gray-900"
+                    />
+                    <textarea
+                      value={manualModuleSummary}
+                      onChange={(e) => setManualModuleSummary(e.target.value)}
+                      placeholder="Optional summary"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none text-gray-900 min-h-[90px]"
+                    />
+                    <input
+                      type="text"
+                      value={manualModuleKeywords}
+                      onChange={(e) => setManualModuleKeywords(e.target.value)}
+                      placeholder="Optional keywords, comma-separated"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none text-gray-900"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isSavingManualModule}
+                      className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:bg-green-400"
+                    >
+                      {isSavingManualModule ? (
+                        <><Loader2 className="w-4 h-4 animate-spin" /> Adding Module...</>
+                      ) : (
+                        <><Plus className="w-4 h-4" /> Add Module and Fetch Resources</>
+                      )}
+                    </button>
+                  </form>
+                </div>
 
                 {outlineData?.outline && (
                   <div className="mb-10 rounded-2xl border border-gray-200 bg-white p-5">
@@ -1020,28 +1278,6 @@ export default function CourseDashboardPage({
                   </div>
                 )}
                 
-                <h3 className={`text-lg font-bold text-gray-900 mb-4 flex items-center gap-2 ${titillium.className}`}>
-                  <Calendar className="w-5 h-5 text-gray-400" /> Upcoming Classes
-                </h3>
-                
-                {course.course_schedules && course.course_schedules.length > 0 ? (
-                  <div className="flex flex-wrap gap-3">
-                    {course.course_schedules.map((slot) => (
-                      <div
-                        key={slot.id}
-                        className={`bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 flex items-center gap-3 ${outfit.className}`}
-                      >
-                        <Clock className="w-4 h-4 text-green-600" />
-                        <div>
-                          <p className="font-semibold text-gray-900 text-sm leading-none">{slot.day}</p>
-                          <p className="text-gray-500 text-xs mt-1">{slot.time_slot}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className={`text-gray-500 text-sm ${outfit.className}`}>No schedules added.</p>
-                )}
               </div>
             )}
 
@@ -1064,6 +1300,8 @@ export default function CourseDashboardPage({
                   </button>
                 </div>
 
+                {renderInlineUploadProgressCard()}
+
                 {(!course.course_materials || course.course_materials.length === 0 || (course.course_materials.length === 1 && course.course_materials[0].material_type === 'primary_slide')) ? (
                   <div className="text-center py-16 bg-gray-50 rounded-3xl border border-dashed border-gray-200">
                     <FileText className="w-12 h-12 text-gray-300 mx-auto mb-4" />
@@ -1081,6 +1319,11 @@ export default function CourseDashboardPage({
                            <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                              <p className={`text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md inline-block uppercase tracking-wider ${outfit.className}`}>{mat.material_type.replace('_', ' ')}</p>
                              {renderStatusBadge(mat.id)}
+                             {isMaterialProcessingInBackground(mat.id) && (
+                               <span className={`text-[10px] text-gray-500 ${outfit.className}`}>
+                                 Processing in background…
+                               </span>
+                             )}
                            </div>
                          </div>
                          <div className="flex items-center gap-1">
@@ -1088,7 +1331,7 @@ export default function CourseDashboardPage({
                               <UploadCloud className="w-5 h-5 rotate-180" />
                            </a>
                            <button
-                             onClick={() => handleDeleteMaterial(mat)}
+                             onClick={() => requestDeleteMaterial(mat)}
                              disabled={deletingMaterialId === mat.id}
                              className="text-gray-400 hover:text-red-600 transition-colors p-2 disabled:opacity-60"
                            >
@@ -1272,6 +1515,44 @@ export default function CourseDashboardPage({
                 )}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {deleteIntent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-6 sm:p-7 w-full max-w-md shadow-2xl border border-gray-100">
+            <h3 className={`text-xl font-bold text-gray-900 ${titillium.className}`}>
+              Confirm Delete
+            </h3>
+            <p className={`text-sm text-gray-600 mt-2 ${outfit.className}`}>
+              {deleteIntent.kind === "course" &&
+                "Delete this course permanently? This action cannot be undone."}
+              {deleteIntent.kind === "schedule" &&
+                "Delete this schedule slot? You can add it again later."}
+              {deleteIntent.kind === "material" && deleteIntent.material.material_type !== "primary_slide" &&
+                "Delete this uploaded material? This will remove related vectors and processing history."}
+              {deleteIntent.kind === "material" && deleteIntent.material.material_type === "primary_slide" &&
+                "Delete this main course file? This will also remove the generated course outline and module resources."}
+            </p>
+
+            <div className="mt-6 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setDeleteIntent(null)}
+                disabled={isConfirmingDelete}
+                className={`px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-60 ${outfit.className}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteIntent}
+                disabled={isConfirmingDelete}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-600 hover:bg-red-700 disabled:bg-red-400 flex items-center gap-2 ${outfit.className}`}
+              >
+                {isConfirmingDelete ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       )}
