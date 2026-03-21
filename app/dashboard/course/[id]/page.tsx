@@ -171,6 +171,7 @@ export default function CourseDashboardPage({
   const [uploadType, setUploadType] = useState("primary_slide");
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadModalSubmitting, setIsUploadModalSubmitting] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [materialUploadTracker, setMaterialUploadTracker] = useState<MaterialUploadTracker | null>(null);
   const [manualModuleTitle, setManualModuleTitle] = useState("");
@@ -589,10 +590,12 @@ export default function CourseDashboardPage({
     const selectedTitle = uploadTitle.trim();
     const selectedType = uploadType;
 
+    setIsUploadModalSubmitting(true);
     setIsUploadModalOpen(false);
     setUploadFile(null);
     setUploadTitle("");
     setUploadType("primary_slide");
+    setIsUploadModalSubmitting(false);
     setIsUploading(true);
     setMaterialUploadTracker({
       title: selectedTitle || selectedFile.name,
@@ -771,6 +774,7 @@ export default function CourseDashboardPage({
       alert("An unexpected error occurred during upload.");
       setMaterialUploadTracker(null);
     } finally {
+      setIsUploadModalSubmitting(false);
       setIsUploading(false);
     }
   };
@@ -1292,6 +1296,8 @@ export default function CourseDashboardPage({
                   <button
                     onClick={() => {
                         setUploadType('lecture_slide');
+                        setUploadProgress("");
+                        setIsUploadModalSubmitting(false);
                         setIsUploadModalOpen(true);
                     }}
                     className={`flex-shrink-0 flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 focus:ring-4 focus:ring-green-200 px-5 py-2.5 rounded-xl font-semibold transition-all ${outfit.className}`}
@@ -1433,7 +1439,7 @@ export default function CourseDashboardPage({
           <div className="bg-white rounded-3xl p-6 sm:p-8 w-full max-w-lg shadow-2xl relative">
             <button
               onClick={() => {
-                if(!isUploading) setIsUploadModalOpen(false);
+                if(!isUploadModalSubmitting) setIsUploadModalOpen(false);
               }}
               className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
             >
@@ -1499,13 +1505,13 @@ export default function CourseDashboardPage({
 
               <button
                 type="submit"
-                disabled={isUploading}
+                disabled={isUploadModalSubmitting}
                 className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3.5 rounded-xl transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 disabled:bg-green-400"
               >
-                {isUploading ? (
+                {isUploadModalSubmitting ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    {uploadProgress || "Processing Document..."}
+                    Queuing...
                   </>
                 ) : (
                   <>
