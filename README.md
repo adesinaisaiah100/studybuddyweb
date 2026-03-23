@@ -20,6 +20,19 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Environment Variables
+
+For Google-model-powered web search in the resource orchestrator, add these to your `.env.local`:
+
+```bash
+GOOGLE_API_KEY=your_google_ai_studio_api_key
+GOOGLE_SEARCH_MODEL=gemini-2.5-pro
+```
+
+Notes:
+- `GOOGLE_SEARCH_MODEL` is the model name you can change anytime.
+- If either value is missing, the app automatically falls back to Tavily/Wikipedia web search.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

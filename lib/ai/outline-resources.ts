@@ -27,12 +27,27 @@ type ResourceRow = {
   metadata?: Record<string, unknown>;
 };
 
+type GenerateResourcesOptions = {
+  minimumResults?: number;
+};
+
 type ResourceAgentResult = {
   rows: ResourceRow[];
   status: string;
 };
 
-const MIN_RESOURCES_PER_MODULE = 5;
+const MIN_RESOURCES_PER_MODULE = 18;
+const MAX_RESOURCES_PER_MODULE = 80;
+const WEB_RESULTS_PER_QUERY = 20;
+const YOUTUBE_RESULTS_PER_QUERY = 30;
+const YOUTUBE_MAX_PAGES_BASE = 2;
+const YOUTUBE_MAX_PAGES_LOAD_MORE = 3;
+
+type GoogleSearchResource = {
+  title: string;
+  url: string;
+  snippet?: string;
+};
 
 function slugify(input: string) {
   return input
@@ -56,6 +71,68 @@ function normalizeUrl(url: string) {
 
 function normalizeText(value: string) {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function isTechnicalCourse(courseTitle: string): boolean {
+  const technicalKeywords = /engineering|electrical|software|computer|programming|math|physics|chemistry|biology|science|technology|IT|tech|telecommunications|electronics|automation|control|systems/i;
+  return technicalKeywords.test(courseTitle);
+}
+
+function isRelevantEducationalSource(url: string, title: string): boolean {
+  // Reject obvious non-educational content
+  const nonEducationalPatterns = /movie|film|actor|actress|character|tv show|episode|trailer|streaming|imdb|rotten|company|sports|athlete|player|game|gaming|social media|facebook|twitter|linkedin|instagram/i;
+  if (nonEducationalPatterns.test(title.toLowerCase())) {
+    return false;
+  }
+
+  const urlLower = url.toLowerCase();
+
+  // Prefer educational/academic domains
+  const preferredDomains = /\.edu\b|ocw\.mit\.edu|coursera\.com|udemy\.com|khan|arxiv|ieee\.org|springer|researchgate|scholar\.google|techsmith|linktopastthefuture|open\.edx/i;
+  if (preferredDomains.test(urlLower)) {
+    return true;
+  }
+
+  // Reject known non-academic domains
+  const rejectedDomains = /imdb\.com|fandom|reddit\.com\/r\/(movies|television|gaming)|twitter\.com|facebook\.com|instagram\.com|youtube\.com\/channel|pinterest\.com|tiktok\.com|twitch\.tv/i;
+  if (rejectedDomains.test(urlLower)) {
+    return false;
+  }
+
+  // Keep Wikipedia only when likely educational (avoid noisy list pages)
+  if (/wikipedia\.org/.test(urlLower) && /^list of\b/i.test(title.trim())) {
+    return false;
+  }
+
+  // Generic tech/engineering sites are usually OK
+  if (/github\.com|stackoverflow\.com|developer|docs\.|api\.|\.dev\b/i.test(urlLower)) {
+    return true;
+  }
+
+  return true;
+}
+
+function isDirectYouTubeVideoUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
+
+    if (hostname === "youtube.com") {
+      return parsed.pathname === "/watch" && parsed.searchParams.has("v");
+    }
+
+    if (hostname === "youtu.be") {
+      return parsed.pathname.length > 1;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function hasGrounding(sourceText: string, candidate: string) {
@@ -166,11 +243,20 @@ function enforceGroundedOutline(sourceText: string, outline: CourseOutline): Cou
   };
 }
 
-function scoreResource(moduleTitle: string, keywords: string[], title: string, url: string) {
+function scoreResource(
+  moduleTitle: string,
+  moduleSummary: string,
+  keywords: string[],
+  subtopic: string,
+  title: string,
+  url: string
+) {
   const hay = `${title} ${url}`.toLowerCase();
   let score = 0;
 
   if (hay.includes(moduleTitle.toLowerCase())) score += 3;
+  if (moduleSummary && hay.includes(moduleSummary.toLowerCase().slice(0, 40))) score += 2;
+  if (subtopic && hay.includes(subtopic.toLowerCase())) score += 2;
 
   for (const keyword of keywords) {
     if (hay.includes(keyword.toLowerCase())) score += 1;
@@ -180,10 +266,56 @@ function scoreResource(moduleTitle: string, keywords: string[], title: string, u
     score += 2;
   }
 
+  if (/youtube\.com\/watch\?v=|youtu\.be\//i.test(url)) {
+    score += 1;
+  }
+
+  if (/\b(movie|film|actor|actress|character|episode|trailer|streaming|imdb|fandom|sports|gaming)\b/i.test(title)) {
+    score -= 5;
+  }
+
+  if (/\b(list of|disambiguation)\b/i.test(title)) {
+    score -= 3;
+  }
+
   return score;
 }
 
-async function searchWebWithTavily(query: string): Promise<Array<{ title: string; url: string; source: string }>> {
+function buildQueryVariants(
+  courseTitle: string,
+  moduleTitle: string,
+  moduleSummary: string,
+  keywords: string[],
+  resourceType: "web" | "youtube"
+) {
+  const summaryPhrase = moduleSummary
+    .split(/[.;,\n]/)
+    .map((part) => part.trim())
+    .filter((part) => part.length >= 4)[0] || moduleTitle;
+  const keywordText = keywordBundle(keywords);
+  const disciplineSuffix = isTechnicalCourse(courseTitle) ? " engineering technical course" : " educational course";
+
+  const youtubeQueries = [
+    `${courseTitle} ${moduleTitle} ${keywordText} lecture`.trim(),
+    `${moduleTitle} ${summaryPhrase} tutorial`.trim(),
+    `${moduleTitle} ${keywordText} explained`.trim(),
+    `${courseTitle} ${moduleTitle} ${summaryPhrase} full class`.trim(),
+    `${moduleTitle} ${keywordText} walkthrough examples`.trim(),
+  ];
+
+  const webQueries = [
+    `${courseTitle} ${moduleTitle} ${keywordText} lecture notes pdf${disciplineSuffix}`.trim(),
+    `${moduleTitle} ${summaryPhrase} university syllabus${disciplineSuffix}`.trim(),
+    `${moduleTitle} ${keywordText} open courseware${disciplineSuffix}`.trim(),
+    `${moduleTitle} ${summaryPhrase} textbook chapter${disciplineSuffix}`.trim(),
+    `${moduleTitle} ${keywordText} practice problems${disciplineSuffix}`.trim(),
+  ];
+
+  const seed = resourceType === "youtube" ? youtubeQueries : webQueries;
+  return Array.from(new Set(seed.map((query) => query.replace(/\s+/g, " ").trim()))).slice(0, 6);
+}
+
+async function searchWebWithTavily(query: string, maxResults = WEB_RESULTS_PER_QUERY): Promise<Array<{ title: string; url: string; source: string }>> {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey) return [];
 
@@ -193,7 +325,7 @@ async function searchWebWithTavily(query: string): Promise<Array<{ title: string
     body: JSON.stringify({
       api_key: apiKey,
       query,
-      max_results: 10,
+      max_results: clamp(maxResults, 5, 30),
       search_depth: "advanced",
       include_answer: false,
       include_raw_content: false,
@@ -211,6 +343,88 @@ async function searchWebWithTavily(query: string): Promise<Array<{ title: string
       source: "tavily-search",
     }))
     .filter((entry: { title: string; url: string; source: string }) => Boolean(entry.url));
+}
+
+async function searchWebWithGoogleModel(input: {
+  query: string;
+  moduleTitle: string;
+  moduleSummary: string;
+  keywords: string[];
+  maxResults?: number;
+}): Promise<Array<{ title: string; url: string; source: string; snippet?: string }>> {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  const model = process.env.GOOGLE_SEARCH_MODEL;
+  if (!apiKey || !model) return [];
+
+  const prompt = [
+    "Use Google Search tool results only.",
+    `Find high-quality educational web resources for: ${input.query}`,
+    `Module: ${input.moduleTitle}`,
+    `Module summary: ${input.moduleSummary || "N/A"}`,
+    `Module keywords: ${input.keywords.join(", ") || "N/A"}`,
+    "Context: prioritize electrical engineering / STEM educational material where applicable.",
+    "Include only resources that directly teach the topic (lecture notes, textbooks, university pages, technical docs, research/tutorial pages).",
+    "Exclude entertainment content (movies, TV, fandom pages), social media, and biography/list pages unless strictly technical and instructional.",
+    `Return JSON object with shape {\"resources\":[{\"title\":string,\"url\":string,\"snippet\":string}]}`,
+    `Return at most ${clamp(input.maxResults ?? WEB_RESULTS_PER_QUERY, 10, 30)} resources.`,
+    "Use direct page URLs, not search engine result pages.",
+    "Avoid ambiguous topic collisions (for example: Transformers franchise vs electrical transformers) and choose domain-specific technical resources.",
+  ].join("\n");
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: prompt }],
+          },
+        ],
+        tools: [{ google_search: {} }],
+        generationConfig: {
+          temperature: 0,
+          responseMimeType: "application/json",
+        },
+      }),
+    }
+  );
+
+  if (!response.ok) return [];
+  const payload = await response.json();
+  const textParts = (payload?.candidates?.[0]?.content?.parts || [])
+    .map((part: { text?: string }) => part?.text || "")
+    .filter((part: string) => part.trim().length > 0);
+
+  if (textParts.length === 0) return [];
+
+  try {
+    const parsed = JSON.parse(textParts.join("\n")) as {
+      resources?: GoogleSearchResource[];
+    };
+    const resources = Array.isArray(parsed?.resources) ? parsed.resources : [];
+
+    return resources
+      .map((entry) => ({
+        title: String(entry?.title || "").trim() || "Web Resource",
+        url: String(entry?.url || "").trim(),
+        source: "google-model-search",
+        snippet: String(entry?.snippet || "").trim(),
+      }))
+      .filter((entry) => {
+        if (!entry.url) return false;
+        try {
+          const parsedUrl = new URL(entry.url);
+          return /^https?:$/.test(parsedUrl.protocol);
+        } catch {
+          return false;
+        }
+      });
+  } catch {
+    return [];
+  }
 }
 
 async function searchWikipedia(query: string): Promise<Array<{ title: string; url: string; source: string }>> {
@@ -257,123 +471,167 @@ function deriveKeywordsFromTitle(moduleTitle: string) {
     .slice(0, 5);
 }
 
+function keywordBundle(keywords: string[]) {
+  return keywords
+    .map((keyword) => keyword.trim())
+    .filter((keyword) => keyword.length >= 3)
+    .slice(0, 4)
+    .join(" ");
+}
+
 async function youtubeResourcesForModule(
   courseTitle: string,
   moduleTitle: string,
+  moduleSummary: string,
   keywords: string[],
   minimumResults = MIN_RESOURCES_PER_MODULE
 ) {
   const provider = createYouTubeProvider();
   const moduleKeywords = keywords.length > 0 ? keywords : deriveKeywordsFromTitle(moduleTitle);
-
-  const queryVariants = [
-    `${courseTitle} ${moduleTitle} lecture`,
-    `${moduleTitle} tutorial ${moduleKeywords.slice(0, 2).join(" ")}`,
-    `${moduleTitle} full course class`,
-  ];
+  const queryVariants = buildQueryVariants(
+    courseTitle,
+    moduleTitle,
+    moduleSummary,
+    moduleKeywords,
+    "youtube"
+  );
 
   const collected: ResourceRow[] = [];
+  const pageLimit = minimumResults > MIN_RESOURCES_PER_MODULE
+    ? YOUTUBE_MAX_PAGES_LOAD_MORE
+    : YOUTUBE_MAX_PAGES_BASE;
 
   for (const query of queryVariants) {
-    const results = await provider.search(query, 10);
-    for (const video of results) {
-      collected.push({
-        module_slug: slugify(moduleTitle),
-        module_title: moduleTitle,
-        resource_type: "youtube",
-        title: video.title,
-        url: video.url,
-        source: "youtube-api",
-        score: scoreResource(moduleTitle, moduleKeywords, video.title, video.url),
-        metadata: {
-          channelTitle: video.channelTitle,
-          publishedAt: video.publishedAt,
-        },
-      });
+    let nextPageToken: string | undefined;
+    let fetchedPages = 0;
+
+    while (fetchedPages < pageLimit) {
+      const page = await provider.searchPage(
+        query,
+        YOUTUBE_RESULTS_PER_QUERY,
+        nextPageToken
+      );
+
+      for (const video of page.items) {
+        if (!isDirectYouTubeVideoUrl(video.url)) continue;
+        collected.push({
+          module_slug: slugify(moduleTitle),
+          module_title: moduleTitle,
+          resource_type: "youtube",
+          title: video.title,
+          url: video.url,
+          source: "youtube-api",
+          score: scoreResource(
+            moduleTitle,
+            moduleSummary,
+            moduleKeywords,
+            keywordBundle(moduleKeywords),
+            video.title,
+            video.url
+          ),
+          metadata: {
+            query,
+            channelTitle: video.channelTitle,
+            publishedAt: video.publishedAt,
+            moduleSummary,
+            keywords: moduleKeywords,
+          },
+        });
+      }
+
+      fetchedPages += 1;
+      nextPageToken = page.nextPageToken;
+
+      if (!nextPageToken) break;
+      if (dedupeAndRank(collected, minimumResults).length >= minimumResults) break;
     }
 
     if (dedupeAndRank(collected, minimumResults).length >= minimumResults) break;
   }
 
-  const ranked = dedupeAndRank(collected, 12);
-  if (ranked.length >= minimumResults) {
-    return ranked.slice(0, minimumResults);
-  }
-
-  const fallbackRows = queryVariants.map((query, index) => ({
-    module_slug: slugify(moduleTitle),
-    module_title: moduleTitle,
-    resource_type: "youtube" as const,
-    title: `${moduleTitle} YouTube Search ${index + 1}`,
-    url: `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`,
-    source: "youtube-search-fallback",
-    score: scoreResource(moduleTitle, moduleKeywords, query, query),
-  }));
-
-  return dedupeAndRank([...ranked, ...fallbackRows], minimumResults).slice(0, minimumResults);
+  return dedupeAndRank(
+    collected.filter((row) => row.score >= 2),
+    clamp(minimumResults, 4, MAX_RESOURCES_PER_MODULE)
+  );
 }
 
 async function webResourcesForModule(
+  courseTitle: string,
   moduleTitle: string,
+  moduleSummary: string,
   keywords: string[],
   minimumResults = MIN_RESOURCES_PER_MODULE
 ) {
   const moduleKeywords = keywords.length > 0 ? keywords : deriveKeywordsFromTitle(moduleTitle);
-  const queryVariants = [
-    `${moduleTitle} ${moduleKeywords.slice(0, 3).join(" ")} lecture notes textbook`,
-    `${moduleTitle} syllabus study guide university`,
-    `${moduleTitle} open courseware pdf`,
-  ];
+  const queryVariants = buildQueryVariants(
+    courseTitle,
+    moduleTitle,
+    moduleSummary,
+    moduleKeywords,
+    "web"
+  );
 
   const collected: ResourceRow[] = [];
-  let providerStatus = process.env.TAVILY_API_KEY ? "enabled_tavily" : "fallback_wikipedia";
+  let providerStatus = process.env.GOOGLE_API_KEY && process.env.GOOGLE_SEARCH_MODEL
+    ? "enabled_google_model_search"
+    : process.env.TAVILY_API_KEY
+      ? "enabled_tavily"
+      : "fallback_wikipedia";
 
   for (const query of queryVariants) {
-    const tavilyRows = await searchWebWithTavily(query);
-    const wikiRows = tavilyRows.length > 0 ? [] : await searchWikipedia(query);
+    const googleRows = await searchWebWithGoogleModel({
+      query,
+      moduleTitle,
+      moduleSummary,
+      keywords: moduleKeywords,
+      maxResults: WEB_RESULTS_PER_QUERY,
+    });
 
-    if (tavilyRows.length === 0 && wikiRows.length > 0) {
+    const tavilyRows = googleRows.length > 0 ? [] : await searchWebWithTavily(query, WEB_RESULTS_PER_QUERY);
+    const wikiRows = googleRows.length > 0 || tavilyRows.length > 0
+      ? []
+      : await searchWikipedia(`${moduleTitle} ${keywordBundle(moduleKeywords)}`);
+
+    if (googleRows.length === 0 && tavilyRows.length === 0 && wikiRows.length > 0) {
       providerStatus = "fallback_wikipedia";
     }
+    if (googleRows.length === 0 && tavilyRows.length > 0 && providerStatus !== "enabled_google_model_search") {
+      providerStatus = "enabled_tavily";
+    }
 
-    const rows = [...tavilyRows, ...wikiRows].map((entry) => ({
-      module_slug: slugify(moduleTitle),
-      module_title: moduleTitle,
-      resource_type: "web" as const,
-      title: entry.title,
-      url: entry.url,
-      source: entry.source,
-      score: scoreResource(moduleTitle, moduleKeywords, entry.title, entry.url),
-    }));
+    const rows = [...googleRows, ...tavilyRows, ...wikiRows]
+      .filter((entry) => isRelevantEducationalSource(entry.url, entry.title))
+      .map((entry) => ({
+        module_slug: slugify(moduleTitle),
+        module_title: moduleTitle,
+        resource_type: "web" as const,
+        title: entry.title,
+        url: entry.url,
+        source: entry.source,
+        score: scoreResource(
+          moduleTitle,
+          moduleSummary,
+          moduleKeywords,
+          keywordBundle(moduleKeywords),
+          entry.title,
+          entry.url
+        ),
+        metadata: {
+          query,
+          snippet: "snippet" in entry ? entry.snippet : undefined,
+          moduleSummary,
+          keywords: moduleKeywords,
+        },
+      }));
 
     collected.push(...rows);
-
-    if (dedupeAndRank(collected, minimumResults).length >= minimumResults) break;
   }
-
-  const ranked = dedupeAndRank(collected, 12);
-  if (ranked.length >= minimumResults) {
-    return { rows: ranked.slice(0, minimumResults), status: providerStatus };
-  }
-
-  const fallbackRows: ResourceRow[] = [
-    `site:ocw.mit.edu ${moduleTitle}`,
-    `site:openstax.org ${moduleTitle}`,
-    `site:wikipedia.org ${moduleTitle}`,
-    `site:coursera.org ${moduleTitle}`,
-    `site:edx.org ${moduleTitle}`,
-  ].map((query, index) => ({
-    module_slug: slugify(moduleTitle),
-    module_title: moduleTitle,
-    resource_type: "web",
-    title: `${moduleTitle} Study Resource ${index + 1}`,
-    url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-    source: "web-search-fallback",
-    score: scoreResource(moduleTitle, moduleKeywords, query, query),
-  }));
 
   return {
-    rows: dedupeAndRank([...ranked, ...fallbackRows], minimumResults).slice(0, minimumResults),
+    rows: dedupeAndRank(
+      collected.filter((row) => row.score >= 2),
+      clamp(minimumResults, 4, MAX_RESOURCES_PER_MODULE)
+    ),
     status: providerStatus,
   };
 }
@@ -422,6 +680,7 @@ async function youtubeResourcesAgent(outline: CourseOutline): Promise<ResourceAg
       const moduleRows = await youtubeResourcesForModule(
         outline.courseTitle,
         unit.title,
+        unit.summary,
         unit.keywords,
         MIN_RESOURCES_PER_MODULE
       );
@@ -444,7 +703,9 @@ async function webResourcesAgent(outline: CourseOutline): Promise<ResourceAgentR
     const statuses = new Set<string>();
     for (const unit of outline.modules) {
       const moduleWeb = await webResourcesForModule(
+        outline.courseTitle,
         unit.title,
+        unit.summary,
         unit.keywords,
         MIN_RESOURCES_PER_MODULE
       );
@@ -465,18 +726,32 @@ async function webResourcesAgent(outline: CourseOutline): Promise<ResourceAgentR
 export async function generateResourcesForModule(input: {
   courseTitle: string;
   moduleTitle: string;
+  moduleSummary?: string;
   keywords?: string[];
+  options?: GenerateResourcesOptions;
 }) {
   const keywords = (input.keywords || []).filter((keyword) => keyword.trim().length >= 2);
+  const minimumResults = clamp(
+    input.options?.minimumResults ?? MIN_RESOURCES_PER_MODULE,
+    4,
+    MAX_RESOURCES_PER_MODULE
+  );
 
   const [youtubeRows, webResult] = await Promise.all([
     youtubeResourcesForModule(
       input.courseTitle,
       input.moduleTitle,
+      input.moduleSummary || "",
       keywords,
-      MIN_RESOURCES_PER_MODULE
+      minimumResults
     ),
-    webResourcesForModule(input.moduleTitle, keywords, MIN_RESOURCES_PER_MODULE),
+    webResourcesForModule(
+      input.courseTitle,
+      input.moduleTitle,
+      input.moduleSummary || "",
+      keywords,
+      minimumResults
+    ),
   ]);
 
   return {

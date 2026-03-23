@@ -101,6 +101,10 @@ type ModuleResource = {
   url: string;
   source: string;
   score: number;
+  metadata?: {
+    query?: string;
+    [key: string]: unknown;
+  } | null;
 };
 
 type UploadStage = "extracting" | "uploading" | "queued" | "vectorizing" | "ready";
@@ -179,6 +183,8 @@ export default function CourseDashboardPage({
   const [manualModuleKeywords, setManualModuleKeywords] = useState("");
   const [isSavingManualModule, setIsSavingManualModule] = useState(false);
   const [deletingMaterialId, setDeletingMaterialId] = useState<string | null>(null);
+  const [isRefetchingResources, setIsRefetchingResources] = useState(false);
+  const [expandedResourceModules, setExpandedResourceModules] = useState<Record<string, boolean>>({});
 
   // Delete confirmation modal
   const [deleteIntent, setDeleteIntent] = useState<DeleteIntent | null>(null);
@@ -283,6 +289,40 @@ export default function CourseDashboardPage({
   }, [jobs]);
 
   const loading = !course && !error;
+
+  const handleRefetchResources = async () => {
+    try {
+      setIsRefetchingResources(true);
+      const response = await fetch("/api/course-outline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "refetch_resources",
+          courseId: unwrappedParams.id,
+        }),
+      });
+
+      let payload: { error?: string; failedModules?: string[] } | null = null;
+      try {
+        payload = await response.json();
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const details = payload?.failedModules?.length
+          ? ` Failed modules: ${payload.failedModules.join(", ")}.`
+          : "";
+        throw new Error((payload?.error || "Failed to fetch resources") + details);
+      }
+
+      await mutateOutline();
+    } catch (error) {
+      window.alert((error as Error).message || "Could not fetch resources right now. Please try again.");
+    } finally {
+      setIsRefetchingResources(false);
+    }
+  };
 
   const getJobForMaterial = (materialId: string) => jobsByMaterialId.get(materialId);
 
@@ -1219,11 +1259,27 @@ export default function CourseDashboardPage({
                       <h3 className={`text-lg font-bold text-gray-900 ${titillium.className}`}>
                         Course Outline & Resources
                       </h3>
-                      <span className={`text-xs text-gray-500 ${outfit.className}`}>
-                        {outlineData.outline.youtube_status === "disabled_no_api_key"
-                          ? "YouTube optional (API key not set)"
-                          : "Web + YouTube resources"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs text-gray-500 ${outfit.className}`}>
+                          {outlineData.outline.youtube_status === "disabled_no_api_key"
+                            ? "YouTube optional (API key not set)"
+                            : "Web + YouTube resources"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={handleRefetchResources}
+                          disabled={isRefetchingResources}
+                          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+                        >
+                          {isRefetchingResources ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" /> Fetching...
+                            </>
+                          ) : (
+                            "Fetch Resources"
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     <p className={`text-sm text-gray-600 mb-4 ${outfit.className}`}>
@@ -1246,6 +1302,10 @@ export default function CourseDashboardPage({
                         const moduleResources = (outlineData.resources || []).filter(
                           (resource) => resource.module_title === module.title
                         );
+                        const sortedResources = [...moduleResources].sort((a, b) => b.score - a.score);
+                        const isExpanded = !!expandedResourceModules[module.title];
+                        const visibleResources = isExpanded ? sortedResources : sortedResources.slice(0, 4);
+                        const hasHiddenResources = sortedResources.length > 4;
 
                         return (
                           <div key={module.title} className="rounded-xl border border-gray-100 p-4">
@@ -1259,9 +1319,9 @@ export default function CourseDashboardPage({
                               ))}
                             </div>
 
-                            {moduleResources.length > 0 && (
+                            {sortedResources.length > 0 && (
                               <div className="mt-3 space-y-1">
-                                {moduleResources.slice(0, 5).map((resource) => (
+                                {visibleResources.map((resource) => (
                                   <a
                                     key={resource.id}
                                     href={resource.url}
@@ -1273,6 +1333,23 @@ export default function CourseDashboardPage({
                                     {resource.title}
                                   </a>
                                 ))}
+
+                                {hasHiddenResources && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setExpandedResourceModules((prev) => ({
+                                        ...prev,
+                                        [module.title]: !isExpanded,
+                                      }))
+                                    }
+                                    className="mt-2 inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:bg-gray-50"
+                                  >
+                                    {isExpanded
+                                      ? "View less"
+                                      : `View all (${sortedResources.length - 4} more)`}
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
