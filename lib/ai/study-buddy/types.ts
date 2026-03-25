@@ -31,9 +31,66 @@ export type RetrievalBundle = {
   usedCache: boolean;
 };
 
+export type IntentType =
+  | "learn"
+  | "solve"
+  | "quiz"
+  | "revise"
+  | "explore"
+  | "unclear";
+
+export type LearningStrategy =
+  | "explain-simple"
+  | "step-by-step"
+  | "visual"
+  | "interactive"
+  | "assessment"
+  | "mixed";
+
+export type IntentAnalysis = {
+  intent: IntentType;
+  topic?: string;
+  subject?: string;
+  difficulty?: "low" | "medium" | "high" | "unknown";
+  confidence: number;
+};
+
+export type UnderstandingState = {
+  topic: string;
+  mastery: number;
+  confidenceGap?: number;
+  lastUpdated: string;
+  weakAreas?: string[];
+};
+
+export type ToolExecutionStep = {
+  tool: string;
+  reason: string;
+  priority: number;
+  input?: Record<string, unknown>;
+};
+
+export type ToolResult = {
+  tool: string;
+  success: boolean;
+  output: unknown;
+  latencyMs?: number;
+};
+
+export type IterationState = {
+  iteration: number;
+  maxIterations: number;
+  previousFeedback?: string;
+};
+
 export type ToolPlan = {
-  recommendedTools: string[];
+  intent: IntentType;
+  strategy: LearningStrategy;
+  recommendedTools: ToolExecutionStep[];
+  executionOrder: string[];
   answerMode: "explain" | "step-by-step" | "quiz" | "mixed";
+  teachingStyle: "simple" | "guided" | "challenging";
+  followUpAction?: "quiz" | "example" | "simulation" | "none";
   rationale: string;
   confidence: number;
 };
@@ -41,11 +98,15 @@ export type ToolPlan = {
 export type StudyBuddyDraft = {
   answer: string;
   usedTools: string[];
+  toolOutputs?: ToolResult[];
 };
 
 export type CritiqueResult = {
   passed: boolean;
   score: number;
+  clarity: number;
+  correctness: number;
+  pedagogy: number;
   feedback: string;
 };
 
@@ -62,11 +123,12 @@ export type StudyBuddyOrchestratorOutput = {
   toolPlan: ToolPlan;
   critique: CritiqueResult;
   iterations: number;
+  understandingUpdate?: UnderstandingState;
   sources: Array<{
     materialId?: string;
     materialTitle?: string;
     snippet: string;
-    retrievalMode: string;
+    retrievalMode: RetrievedContextItem["retrievalMode"];
   }>;
   retrieval: {
     materialCount: number;
