@@ -217,6 +217,43 @@ Planned categories (you will provide exact tool details later):
 
 ---
 
+## 6.4 Tool-by-Tool Design (Start: Visualization Tool)
+
+### Visualization Tool (v1 deterministic)
+
+Purpose:
+- produce renderable study visuals from a learner query without needing LLM generation.
+
+Supported modes:
+- `graph`
+- `chart`
+- `flowchart`
+- `diagram`
+
+Selection logic (deterministic):
+- if `ToolExecutionStep.input.visualType` is provided and valid, use it.
+- else infer from query keywords:
+  - process/pipeline/flow -> `flowchart`
+  - trend/distribution/compare/percentage -> `chart`
+  - relationship/network/connect -> `graph`
+  - default -> `diagram`
+
+Output contract (normalized tool output):
+- `mode`: selected visualization mode
+- `title`: visualization title
+- `rationale`: why this mode was selected
+- `renderHints`: renderer preferences (mermaid + fallback)
+- `mermaid`: renderable Mermaid string
+- `examples`: mode examples with use-cases
+
+Initial examples covered:
+- Graph tool example: concept relationship map
+- Chart tool example: concept metric comparison
+- Flowchart tool example: input -> process -> output sequence
+- Diagram tool example: high-level mindmap
+
+---
+
 ## 7) Prompt System (Draft Scaffolds)
 
 > These are intentionally scaffolds; we will replace with your final prompt text once you send full tool details.
