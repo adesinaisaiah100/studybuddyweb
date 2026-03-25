@@ -208,11 +208,11 @@ export default function DashboardPage() {
                         key={slot.id}
                         className="flex items-center gap-2 text-sm text-gray-600"
                       >
-                        <Clock className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
+                        <Clock className="w-3.5 h-3.5 shrink-0 text-gray-400" />
                         <span>{slot.day.slice(0, 3)} • {slot.time_slot}</span>
                         {slot.venue && (
                           <>
-                            <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400 ml-1" />
+                            <MapPin className="w-3.5 h-3.5 shrink-0 text-gray-400 ml-1" />
                             <span>{slot.venue}</span>
                           </>
                         )}
@@ -237,7 +237,7 @@ export default function DashboardPage() {
           {/* Add Course Card */}
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="group border-2 border-dashed border-gray-200 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center gap-3 hover:border-green-300 hover:bg-green-50/30 transition-all duration-200 min-h-[200px] cursor-pointer"
+            className="group border-2 border-dashed border-gray-200 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center gap-3 hover:border-green-300 hover:bg-green-50/30 transition-all duration-200 min-h-50 cursor-pointer"
           >
             <div className="w-12 h-12 rounded-2xl bg-gray-100 group-hover:bg-green-100 flex items-center justify-center transition-colors duration-200">
               <Plus className="w-6 h-6 text-gray-400 group-hover:text-green-600 transition-colors duration-200" />

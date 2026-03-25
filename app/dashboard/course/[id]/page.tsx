@@ -830,7 +830,7 @@ export default function CourseDashboardPage({
   return (
     <div className="flex h-screen bg-white overflow-hidden">
       {/* Left Sidebar Menu - Fixed to edge */}
-      <div className="w-64 lg:w-72 bg-gray-50 border-r border-gray-200 flex flex-col flex-shrink-0">
+      <div className="w-64 lg:w-72 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
         <div className="p-5 border-b border-gray-200/60 bg-gray-50 z-10">
           <button
             onClick={() => router.push("/dashboard")}
@@ -1026,7 +1026,7 @@ export default function CourseDashboardPage({
                         key={slot.id}
                         className={`group bg-gray-50 hover:bg-white border border-gray-100 hover:border-gray-200 hover:shadow-sm rounded-2xl p-4 flex items-start gap-4 transition-all ${outfit.className}`}
                       >
-                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center flex-shrink-0 shadow-sm border border-gray-100">
+                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center shrink-0 shadow-sm border border-gray-100">
                           <Clock className="w-5 h-5 text-green-500" />
                         </div>
                         <div className="flex-1">
@@ -1073,7 +1073,7 @@ export default function CourseDashboardPage({
                     {course.title}
                   </h1>
 
-                  <div className="lg:w-[360px] lg:flex-shrink-0">
+                  <div className="lg:w-90 lg:shrink-0">
                     <h3 className={`text-lg font-bold text-gray-900 mb-3 flex items-center gap-2 ${titillium.className}`}>
                       <Calendar className="w-5 h-5 text-gray-400" /> Upcoming Classes
                     </h3>
@@ -1150,7 +1150,7 @@ export default function CourseDashboardPage({
                     {course.course_materials.filter(m => m.material_type === 'primary_slide').map(mat => (
                       <div key={mat.id} className="p-5 rounded-2xl border border-green-200 bg-green-50/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center flex-shrink-0">
+                          <div className="w-12 h-12 bg-green-100 text-green-700 rounded-xl flex items-center justify-center shrink-0">
                             <FileText className="w-6 h-6" />
                           </div>
                           <div>
@@ -1230,7 +1230,7 @@ export default function CourseDashboardPage({
                       value={manualModuleSummary}
                       onChange={(e) => setManualModuleSummary(e.target.value)}
                       placeholder="Optional summary"
-                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none text-gray-900 min-h-[90px]"
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none text-gray-900 min-h-22.5"
                     />
                     <input
                       type="text"
@@ -1377,7 +1377,7 @@ export default function CourseDashboardPage({
                         setIsUploadModalSubmitting(false);
                         setIsUploadModalOpen(true);
                     }}
-                    className={`flex-shrink-0 flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 focus:ring-4 focus:ring-green-200 px-5 py-2.5 rounded-xl font-semibold transition-all ${outfit.className}`}
+                    className={`shrink-0 flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 focus:ring-4 focus:ring-green-200 px-5 py-2.5 rounded-xl font-semibold transition-all ${outfit.className}`}
                   >
                     <FileUp className="w-4 h-4" /> Upload Material
                   </button>
@@ -1394,7 +1394,7 @@ export default function CourseDashboardPage({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {course.course_materials.filter(mat => mat.material_type !== 'primary_slide').map((mat) => (
                       <div key={mat.id} className="p-4 rounded-xl border border-gray-200 hover:border-green-200 hover:shadow-md transition-all bg-white flex items-start gap-4">
-                         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+                         <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0">
                            <FileText className="w-6 h-6" />
                          </div>
                          <div className="flex-1 min-w-0">
@@ -1663,7 +1663,7 @@ function SidebarButton({
       onClick={onClick}
       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-medium transition-all duration-200 ${outfit.className} ${
         active 
-          ? "bg-white shadow-sm border border-gray-200/60 text-green-700 shadow-sm" 
+          ? "bg-white shadow-sm border border-gray-200/60 text-green-700"
           : `text-gray-600 hover:bg-gray-200/50 hover:text-gray-900 border border-transparent ${className}`
       }`}
     >
