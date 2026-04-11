@@ -21,7 +21,7 @@ function Navbar() {
           className="w-8 h-8 sm:w-[42px] sm:h-[42px]"
         />
           <span className={`text-lg sm:text-xl font-medium text-neutral-900/80 ${titillium.className}`}>
-            Study Buddy
+            Study Zone
           </span>
         </div>
 

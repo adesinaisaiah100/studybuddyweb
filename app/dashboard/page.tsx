@@ -145,14 +145,14 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             <Image 
               src="/Logo1.png" 
-              alt="Study Buddy Logo" 
+              alt="Study Zone Logo" 
               width={40} 
               height={40} 
               className="object-contain" 
               priority 
             />
             <span className={`text-xl font-bold text-gray-900 ${titillium.className}`}>
-              StudyBuddy
+              Study Zone
             </span>
           </div>
           <button

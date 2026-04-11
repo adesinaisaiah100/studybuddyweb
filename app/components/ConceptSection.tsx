@@ -69,7 +69,7 @@ function ConceptSection() {
         {/* Bottom Centered Text */}
         <div className="mt-20 flex justify-center w-full">
             <p className="text-xl sm:text-2xl md:text-3xl font-medium text-black text-center leading-relaxed max-w-3xl">
-            <span className="text-green-600 font-bold">Study Buddy</span> brings everything together into one intelligent system.
+            <span className="text-green-600 font-bold">Study Zone</span> brings everything together into one intelligent system.
           </p>
         </div>
       </div>

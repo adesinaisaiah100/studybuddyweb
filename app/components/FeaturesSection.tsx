@@ -18,7 +18,7 @@ const features = [
     id: 'course-assistant',
     title: 'AI Course Assistant',
     subtitle: 'Ask questions about any topic and get clear explanations.',
-    description: 'StudyBuddy’s AI understands the context of your course materials, topics, and previous questions. Instead of generic answers, you get explanations tailored to what you’re currently studying and where you might be struggling.',
+    description: 'Study Zone\'s AI understands the context of your course materials, topics, and previous questions. Instead of generic answers, you get explanations tailored to what you\'re currently studying and where you might be struggling.',
     icon: <Sparkles className="w-5 h-5 text-green-600" />,
     image: '/aibook.png',
     span: 'col-span-1 md:col-span-2 lg:col-span-3' // Large featured card
@@ -27,7 +27,7 @@ const features = [
     id: 'knowledge-library',
     title: 'Knowledge Library',
     subtitle: 'Upload slides, textbooks, and notes into a structured study system.',
-    description: 'Keep all your learning materials in one organized place. StudyBuddy structures everything by course, topic, and subtopic so you can easily find resources, connect ideas, and study without digging through scattered files.',
+    description: 'Keep all your learning materials in one organized place. Study Zone structures everything by course, topic, and subtopic so you can easily find resources, connect ideas, and study without digging through scattered files.',
     icon: <Library className="w-5 h-5 text-green-600" />,
     image: '/library.jpg',
     span: 'col-span-1 md:col-span-2'
@@ -36,7 +36,7 @@ const features = [
     id: 'adaptive-planner',
     title: 'Adaptive Planner',
     subtitle: 'Automatically adjusts when you fall behind.',
-    description: 'StudyBuddy monitors your progress and upcoming academic deadlines. If you start falling behind or an exam is approaching, the system adapts your study plan and suggests what to focus on next.',
+    description: 'Study Zone monitors your progress and upcoming academic deadlines. If you start falling behind or an exam is approaching, the system adapts your study plan and suggests what to focus on next.',
     icon: <Calendar className="w-5 h-5 text-green-600" />,
     image: '/adaptive.jpg',
     span: 'col-span-1 md:col-span-2'
@@ -45,7 +45,7 @@ const features = [
     id: 'progress-tracking',
     title: 'Smart Progress Tracking',
     subtitle: 'See exactly how well you understand each topic.',
-    description: 'Track your mastery across courses and topics with clear visual indicators. StudyBuddy helps you identify weak areas early so you can focus your time where it matters most before exams.',
+    description: 'Track your mastery across courses and topics with clear visual indicators. Study Zone helps you identify weak areas early so you can focus your time where it matters most before exams.',
     icon: <TrendingUp className="w-5 h-5 text-green-600" />,
     image: '/progress tracking.jpg',
     span: 'col-span-1 md:col-span-2 lg:col-span-3 lg:row-span-1' // Tall featured card on the side
@@ -54,7 +54,7 @@ const features = [
     id: 'memory-revision',
     title: 'Memory-Based Revision',
     subtitle: 'Recall important concepts at the right time.',
-    description: 'Instead of forgetting what you studied last week, StudyBuddy sends smart reminders and quick review prompts that reinforce important ideas, helping you retain knowledge for the long term.',
+    description: 'Instead of forgetting what you studied last week, Study Zone sends smart reminders and quick review prompts that reinforce important ideas, helping you retain knowledge for the long term.',
     icon: <BrainCircuit className="w-5 h-5 text-green-600" />,
     image: '/memory.jpg',
     span: 'col-span-1 md:col-span-2 lg:col-span-4' // Wide bottom card
@@ -80,7 +80,7 @@ export default function FeaturesSection() {
             Everything you need to <span className="text-green-500"><i>master</i></span> your courses.
           </h2>
           <p className="text-base sm:text-lg md:text-xl text-gray-600">
-            StudyBuddy doesn&apos;t just store your notes. It actively helps you understand them, remember them, and ace your exams.
+            Study Zone doesn&apos;t just store your notes. It actively helps you understand them, remember them, and ace your exams.
           </p>
         </div>
 

@@ -27,7 +27,7 @@ export default function Footer() {
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <Link href="/" className="inline-block mb-4">
               <span className={`text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-500 tracking-tight ${titillium.className}`}>
-                StudyBuddy
+                Study Zone
               </span>
             </Link>
             <p className={`text-gray-500 text-sm max-w-xs ${outfit.className}`}>
@@ -52,7 +52,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className={`text-sm text-gray-400 ${outfit.className}`}>
-            © {currentYear} StudyBuddy. All rights reserved.
+            © {currentYear} Study Zone. All rights reserved.
           </p>
           <div className="flex gap-4">
                {/* Decorative dots to balance the bottom right */}

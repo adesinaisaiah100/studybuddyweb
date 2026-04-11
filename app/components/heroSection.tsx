@@ -35,7 +35,7 @@ function HeroSection() {
               The Digital Infrastructure for <span className='inline-flex w-fit px-3 mt-2 items-start py-2 bg-green-400 text-white -skew-x-12 rounded-2xl'>Modern Learning.</span>
               </h1>
               <p className="text-base sm:text-lg md:text-xl text-gray-700/50 mb-6 sm:mb-8 max-w-lg mx-auto lg:mx-0">
-              StudyBuddy organizes your notes, tracks your progress across
+              Study Zone organizes your notes, tracks your progress across
               courses, and gives you AI-powered help when you need it — all in
               one study system.
               </p>

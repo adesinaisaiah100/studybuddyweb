@@ -70,7 +70,7 @@ export async function processMaterialToEmbeddings(
         Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
         "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-        "X-Title": "LMS StudyBuddy",
+        "X-Title": "LMS Study Zone",
       },
       body: JSON.stringify({
         model: embeddingModel,

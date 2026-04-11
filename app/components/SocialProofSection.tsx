@@ -18,7 +18,7 @@ const outfit = Outfit({
 const testimonials = [
   {
     id: 1,
-    text: "StudyBuddy helped me organize all my course materials in one place.",
+    text: "Study Zone helped me organize all my course materials in one place.",
     author: "Mayowa A.",
     role: "Computer Science Major",
     isRightAligned: false,

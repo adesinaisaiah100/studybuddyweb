@@ -43,7 +43,7 @@ export default function CtaSection() {
             </h2>
             
             <p className={`text-base sm:text-lg md:text-xl text-gray-600 mb-8 sm:mb-10 max-w-2xl font-medium leading-relaxed ${outfit.className}`}>
-              Start using StudyBuddy today and stop stressing over disorganized notes and missed topics.
+              Start using Study Zone today and stop stressing over disorganized notes and missed topics.
             </p>
             
             <div className={`flex flex-col sm:flex-row gap-4 justify-center items-center w-full sm:w-auto ${outfit.className}`}>
