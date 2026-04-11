@@ -18,7 +18,6 @@ import {
   FileText,
   CheckSquare,
   BarChart,
-  Bot,
   Plus,
   X,
   Edit2,
@@ -894,13 +893,6 @@ export default function CourseDashboardPage({
           <div className="my-3 border-t border-gray-200/60 mx-3" />
           
           <SidebarButton 
-            icon={<Bot className="w-5 h-5 text-indigo-500" />} 
-            label="Study Buddy AI" 
-            active={activeTab === "ai"} 
-            onClick={() => setActiveTab("ai")} 
-            className="text-indigo-700 hover:bg-indigo-50/50"
-          />
-          <SidebarButton 
             icon={<Settings className="w-5 h-5" />} 
             label="Course Settings" 
             active={activeTab === "settings"} 
@@ -1429,10 +1421,10 @@ export default function CourseDashboardPage({
             )}
 
             {/* --- PLACEHOLDERS --- */}
-            {["notes", "quizzes", "progress", "ai"].includes(activeTab) && (
+            {["notes", "quizzes", "progress"].includes(activeTab) && (
               <div className="flex flex-col items-center justify-center py-20 text-center">
                 <div className="w-16 h-16 bg-gray-50 rounded-2xl flex items-center justify-center mb-4 border border-gray-100 shadow-sm">
-                  {activeTab === "ai" ? <Bot className="w-8 h-8 text-indigo-400" /> : <Loader2 className="w-8 h-8 text-gray-300" />}
+                  <Loader2 className="w-8 h-8 text-gray-300" />
                 </div>
                 <h2 className={`text-2xl font-bold text-gray-900 mb-2 ${titillium.className}`}>
                   Coming Soon
