@@ -138,7 +138,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-white px-4 sm:px-6 py-6 sm:py-10">
+    <div className="min-h-screen bg-white px-4 sm:px-6 pt-2 sm:pt-4 pb-6 sm:pb-10">
       <div className="w-full px-5 mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-10 sm:mb-12">
