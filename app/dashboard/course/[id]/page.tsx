@@ -25,6 +25,8 @@ import {
   FileUp,
 } from "lucide-react";
 import { extractTextFromFile } from "@/utils/documentExtractor.client";
+import DashboardThemeToggle from "@/app/components/DashboardThemeToggle";
+import { useDashboardTheme } from "@/lib/hooks/useDashboardTheme";
 
 const titillium = Titillium_Web({
   subsets: ["latin"],
@@ -151,6 +153,7 @@ export default function CourseDashboardPage({
   const unwrappedParams = use(params);
   const router = useRouter();
   const supabase = createClient();
+  const { isDark, toggleTheme } = useDashboardTheme();
 
   // Edit states
   const [isEditing, setIsEditing] = useState(false);
@@ -820,24 +823,27 @@ export default function CourseDashboardPage({
 
   if (loading || !course) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
         <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden">
+    <div className={`flex h-screen overflow-hidden ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
       {/* Left Sidebar Menu - Fixed to edge */}
       <div className="w-64 lg:w-72 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
         <div className="p-5 border-b border-gray-200/60 bg-gray-50 z-10">
-          <button
-            onClick={() => router.push("/dashboard")}
-            className={`flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium ${outfit.className}`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Dashboard</span>
-          </button>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={() => router.push("/dashboard")}
+              className={`flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors font-medium ${outfit.className}`}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Dashboard</span>
+            </button>
+            <DashboardThemeToggle isDark={isDark} onToggle={toggleTheme} className="shrink-0" />
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-1.5 custom-scrollbar">
@@ -1518,7 +1524,7 @@ export default function CourseDashboardPage({
               Upload Material
             </h2>
             <p className={`text-gray-500 text-sm mb-6 ${outfit.className}`}>
-              Add slides, textbooks, or past questions to your course vector database to train your AI Study Buddy.
+              Add slides, textbooks, or past questions to your course vector database to train your AI Study Pal.
             </p>
 
             <form onSubmit={handleUploadSubmit} className={`space-y-5 ${outfit.className}`}>

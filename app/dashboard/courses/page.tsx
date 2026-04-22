@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Titillium_Web, Outfit } from "next/font/google";
 import Image from "next/image";
+import BrandWordmark from "@/app/components/BrandWordmark";
+import DashboardThemeToggle from "@/app/components/DashboardThemeToggle";
+import { useDashboardTheme } from "@/lib/hooks/useDashboardTheme";
 import {
   LogOut,
   Plus,
@@ -29,19 +32,92 @@ const outfit = Outfit({
 });
 
 const CARD_COLORS = [
-  { bg: "bg-emerald-50", border: "border-emerald-200", accent: "text-emerald-600", dot: "bg-emerald-500" },
-  { bg: "bg-blue-50", border: "border-blue-200", accent: "text-blue-600", dot: "bg-blue-500" },
-  { bg: "bg-purple-50", border: "border-purple-200", accent: "text-purple-600", dot: "bg-purple-500" },
-  { bg: "bg-amber-50", border: "border-amber-200", accent: "text-amber-600", dot: "bg-amber-500" },
-  { bg: "bg-rose-50", border: "border-rose-200", accent: "text-rose-600", dot: "bg-rose-500" },
-  { bg: "bg-cyan-50", border: "border-cyan-200", accent: "text-cyan-600", dot: "bg-cyan-500" },
-  { bg: "bg-indigo-50", border: "border-indigo-200", accent: "text-indigo-600", dot: "bg-indigo-500" },
-  { bg: "bg-teal-50", border: "border-teal-200", accent: "text-teal-600", dot: "bg-teal-500" },
+  {
+    bg: "bg-emerald-50",
+    border: "border-emerald-200",
+    accent: "text-emerald-600",
+    dot: "bg-emerald-500",
+    darkBg: "bg-emerald-950/45",
+    darkBorder: "border-emerald-800",
+    darkAccent: "text-emerald-300",
+    darkDot: "bg-emerald-400",
+  },
+  {
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+    accent: "text-blue-600",
+    dot: "bg-blue-500",
+    darkBg: "bg-blue-950/45",
+    darkBorder: "border-blue-800",
+    darkAccent: "text-blue-300",
+    darkDot: "bg-blue-400",
+  },
+  {
+    bg: "bg-purple-50",
+    border: "border-purple-200",
+    accent: "text-purple-600",
+    dot: "bg-purple-500",
+    darkBg: "bg-violet-950/45",
+    darkBorder: "border-violet-800",
+    darkAccent: "text-violet-300",
+    darkDot: "bg-violet-400",
+  },
+  {
+    bg: "bg-amber-50",
+    border: "border-amber-200",
+    accent: "text-amber-600",
+    dot: "bg-amber-500",
+    darkBg: "bg-amber-950/40",
+    darkBorder: "border-amber-800",
+    darkAccent: "text-amber-300",
+    darkDot: "bg-amber-400",
+  },
+  {
+    bg: "bg-rose-50",
+    border: "border-rose-200",
+    accent: "text-rose-600",
+    dot: "bg-rose-500",
+    darkBg: "bg-rose-950/45",
+    darkBorder: "border-rose-800",
+    darkAccent: "text-rose-300",
+    darkDot: "bg-rose-400",
+  },
+  {
+    bg: "bg-cyan-50",
+    border: "border-cyan-200",
+    accent: "text-cyan-600",
+    dot: "bg-cyan-500",
+    darkBg: "bg-cyan-950/45",
+    darkBorder: "border-cyan-800",
+    darkAccent: "text-cyan-300",
+    darkDot: "bg-cyan-400",
+  },
+  {
+    bg: "bg-indigo-50",
+    border: "border-indigo-200",
+    accent: "text-indigo-600",
+    dot: "bg-indigo-500",
+    darkBg: "bg-indigo-950/45",
+    darkBorder: "border-indigo-800",
+    darkAccent: "text-indigo-300",
+    darkDot: "bg-indigo-400",
+  },
+  {
+    bg: "bg-teal-50",
+    border: "border-teal-200",
+    accent: "text-teal-600",
+    dot: "bg-teal-500",
+    darkBg: "bg-teal-950/45",
+    darkBorder: "border-teal-800",
+    darkAccent: "text-teal-300",
+    darkDot: "bg-teal-400",
+  },
 ];
 
 export default function DashboardCoursesPage() {
   const supabase = createClient();
   const router = useRouter();
+  const { isDark, toggleTheme } = useDashboardTheme();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newCourseCode, setNewCourseCode] = useState("");
@@ -130,7 +206,7 @@ export default function DashboardCoursesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
           <p className={`text-gray-500 ${outfit.className}`}>Loading your courses...</p>
@@ -142,29 +218,30 @@ export default function DashboardCoursesPage() {
   const firstName = profile?.full_name?.split(" ")[0] || "Student";
 
   return (
-    <div className="min-h-screen bg-white px-4 sm:px-6 py-6 sm:py-10">
+    <div className={`min-h-screen px-4 sm:px-6 py-6 sm:py-10 ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
       <div className="w-full px-5 mx-auto">
         <div className="flex items-center justify-between mb-10 sm:mb-12">
           <div className="flex items-center gap-3">
             <Image
-              src="/Logo1.png"
-              alt="Study Zone Logo"
+              src={isDark ? "/Logo%20Dark%20Mode.png" : "/Logo1.png"}
+              alt="LEARNIVERSE Logo"
               width={40}
               height={40}
               className="object-contain"
               priority
             />
-            <span className={`text-xl font-bold text-gray-900 ${titillium.className}`}>
-              Study Zone
-            </span>
+            <BrandWordmark className="text-xl text-gray-900" />
           </div>
-          <button
-            onClick={handleSignOut}
-            className={`flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 transition-colors ${outfit.className}`}
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Sign out</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <DashboardThemeToggle isDark={isDark} onToggle={toggleTheme} />
+            <button
+              onClick={handleSignOut}
+              className={`flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 transition-colors ${outfit.className}`}
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign out</span>
+            </button>
+          </div>
         </div>
 
         <div className={`mb-8 sm:mb-12 ${outfit.className}`}>
@@ -193,11 +270,11 @@ export default function DashboardCoursesPage() {
               <div
                 key={course.id}
                 onClick={() => router.push(`/dashboard/course/${course.id}`)}
-                className={`group relative ${colors.bg} ${colors.border} border rounded-2xl sm:rounded-3xl p-5 sm:p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
+                className={`group relative ${isDark ? colors.darkBg : colors.bg} ${isDark ? colors.darkBorder : colors.border} border rounded-2xl sm:rounded-3xl p-5 sm:p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
               >
-                <div className={`w-3 h-3 rounded-full ${colors.dot} mb-4`} />
+                <div className={`w-3 h-3 rounded-full ${isDark ? colors.darkDot : colors.dot} mb-4`} />
 
-                <p className={`text-sm font-semibold ${colors.accent} mb-1 tracking-wide uppercase`}>
+                <p className={`text-sm font-semibold ${isDark ? colors.darkAccent : colors.accent} mb-1 tracking-wide uppercase`}>
                   {course.code}
                 </p>
 
@@ -228,7 +305,7 @@ export default function DashboardCoursesPage() {
                 )}
 
                 <div className="absolute top-5 right-5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                  <BookOpen className={`w-5 h-5 ${colors.accent}`} />
+                  <BookOpen className={`w-5 h-5 ${isDark ? colors.darkAccent : colors.accent}`} />
                 </div>
               </div>
             );
@@ -338,3 +415,5 @@ export default function DashboardCoursesPage() {
     </div>
   );
 }
+
+
