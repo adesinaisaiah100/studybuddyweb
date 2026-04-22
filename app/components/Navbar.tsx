@@ -1,12 +1,7 @@
 import Image from 'next/image'
 import React from 'react'
-import { Titillium_Web } from 'next/font/google'
 import AuthButton from './AuthButton'
-
-const titillium = Titillium_Web({
-  subsets: ['latin'],
-  weight: ['400', '600', '700'],
-})
+import BrandWordmark from './BrandWordmark'
 
 function Navbar() {
   return (
@@ -20,9 +15,7 @@ function Navbar() {
           height={42}
           className="w-8 h-8 sm:w-[42px] sm:h-[42px]"
         />
-          <span className={`text-lg sm:text-xl font-medium text-neutral-900/80 ${titillium.className}`}>
-            Study Buddy
-          </span>
+          <BrandWordmark className="text-lg sm:text-xl text-neutral-900/80" />
         </div>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-neutral-700/70 md:flex">
@@ -51,3 +44,4 @@ function Navbar() {
 }
 
 export default Navbar
+

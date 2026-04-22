@@ -19,13 +19,13 @@ const steps = [
   {
     id: 1,
     title: "Create your courses",
-    description: "Start by organizing your semester. Add all your current classes so StudyBuddy knows what you're focusing on.",
+    description: "Start by organizing your semester. Add all your current classes so Study Pal knows what you're focusing on.",
     image: "/organizing.jpg", 
   },
   {
     id: 2,
     title: "Upload notes and study materials",
-    description: "Feed StudyBuddy your syllabus, slides, and class notes to build your personal knowledge base.",
+    description: "Feed Study Pal your syllabus, slides, and class notes to build your personal knowledge base.",
     image: "/uploadcourse.jpg", 
   },
   {
@@ -149,7 +149,7 @@ export default function HowItWorksSection() {
         <div className={`w-full max-w-7xl mx-auto px-4 md:px-8 pb-32 pt-16 flex justify-center ${outfit.className}`}>
           <div className="p-6 md:p-8 text-center max-w-2xl w-full mx-auto">
             <p className="text-lg sm:text-xl md:text-2xl font-medium text-gray-800 leading-relaxed">
-              Over time, <span className="text-green-600 font-bold">StudyBuddy</span> learns how you study and helps you improve.
+              Over time, <span className="text-green-600 font-bold">Study Pal</span> learns how you study and helps you improve.
             </p>
           </div>
         </div>
