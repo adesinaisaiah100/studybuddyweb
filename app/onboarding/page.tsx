@@ -102,7 +102,7 @@ export default function OnboardingPage() {
           <div className="text-center lg:text-left mb-8 sm:mb-10">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-green-50 border border-green-100 text-green-700 text-sm font-medium mb-6">
               <GraduationCap className="w-4 h-4" />
-              <span className={outfit.className}>Welcome to StudyBuddy</span>
+              <span className={outfit.className}>Welcome to LEARNIVERSE</span>
             </div>
             <h1
               className={`text-3xl sm:text-4xl font-bold text-gray-900 mb-3 ${titillium.className}`}
@@ -252,3 +252,4 @@ export default function OnboardingPage() {
     </div>
   );
 }
+

@@ -23,3 +23,108 @@ body {
   color: var(--foreground);
   font-family: var(--font-inter), sans-serif;
 }
+
+.learniverse-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  font-weight: 700;
+  font-family: "Good Times", var(--font-orbitron), "Titillium Web", sans-serif;
+}
+
+.learniverse-wordmark-a {
+  display: inline-flex;
+}
+
+.study-pal-wordmark {
+  font-family: "One Day", "Avenir Next", "Segoe UI", sans-serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.dashboard-theme-shell,
+.dashboard-theme-shell * {
+  transition-property: background-color, border-color, color;
+  transition-duration: 180ms;
+  transition-timing-function: ease;
+}
+
+.dashboard-theme-light {
+  background-color: #ffffff;
+}
+
+.dashboard-theme-dark {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.dashboard-theme-dark .bg-white {
+  background-color: #0f172a !important;
+}
+
+.dashboard-theme-dark .bg-gray-50 {
+  background-color: #111827 !important;
+}
+
+.dashboard-theme-dark .bg-gray-100 {
+  background-color: #1f2937 !important;
+}
+
+.dashboard-theme-dark .bg-white\/80 {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+}
+
+.dashboard-theme-dark .text-gray-900 {
+  color: #f8fafc !important;
+}
+
+.dashboard-theme-dark .text-gray-800 {
+  color: #e5e7eb !important;
+}
+
+.dashboard-theme-dark .text-gray-700 {
+  color: #d1d5db !important;
+}
+
+.dashboard-theme-dark .text-gray-600 {
+  color: #cbd5e1 !important;
+}
+
+.dashboard-theme-dark .text-gray-500 {
+  color: #94a3b8 !important;
+}
+
+.dashboard-theme-dark .text-gray-400 {
+  color: #94a3b8 !important;
+}
+
+.dashboard-theme-dark .border-gray-100 {
+  border-color: #1f2937 !important;
+}
+
+.dashboard-theme-dark .border-gray-200 {
+  border-color: #334155 !important;
+}
+
+.dashboard-theme-dark .border-gray-200\/60 {
+  border-color: rgba(51, 65, 85, 0.6) !important;
+}
+
+.dashboard-theme-dark .border-white\/90 {
+  border-color: rgba(51, 65, 85, 0.8) !important;
+}
+
+.dashboard-theme-dark .hover\:bg-gray-50:hover {
+  background-color: #1f2937 !important;
+}
+
+.dashboard-theme-dark .hover\:bg-gray-100:hover {
+  background-color: #334155 !important;
+}
+
+.dashboard-theme-dark .hover\:text-gray-900:hover {
+  color: #ffffff !important;
+}
