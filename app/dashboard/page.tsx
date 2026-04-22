@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-white"} ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
           <p className={`text-gray-500 ${outfit.className}`}>Loading your courses...</p>
@@ -149,7 +149,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className={`min-h-screen px-4 sm:px-6 pt-2 sm:pt-4 pb-6 sm:pb-10 ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
+    <div className={`min-h-screen px-4 sm:px-6 pt-2 sm:pt-4 pb-6 sm:pb-10 ${isDark ? "bg-slate-900" : "bg-white"} ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
       <div className="w-full px-5 mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-10 sm:mb-12">

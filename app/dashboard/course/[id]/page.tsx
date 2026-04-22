@@ -823,17 +823,17 @@ export default function CourseDashboardPage({
 
   if (loading || !course) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? "bg-slate-900" : "bg-gray-50"} ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
         <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className={`flex h-screen overflow-hidden ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
+    <div className={`flex h-screen overflow-hidden ${isDark ? "bg-slate-900" : "bg-white"} ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
       {/* Left Sidebar Menu - Fixed to edge */}
-      <div className="w-64 lg:w-72 bg-gray-50 border-r border-gray-200 flex flex-col shrink-0">
-        <div className="p-5 border-b border-gray-200/60 bg-gray-50 z-10">
+      <div className={`w-64 lg:w-72 border-r border-gray-200 flex flex-col shrink-0 ${isDark ? "bg-slate-800" : "bg-gray-50"}`}>
+        <div className={`p-5 border-b border-gray-200/60 z-10 ${isDark ? "bg-slate-800" : "bg-gray-50"}`}>
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={() => router.push("/dashboard")}
@@ -908,7 +908,7 @@ export default function CourseDashboardPage({
       </div>
 
       {/* Main Content Area - Full remaining width */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto bg-white">
+      <div className={`flex-1 flex flex-col min-w-0 overflow-y-auto ${isDark ? "bg-slate-900" : "bg-white"}`}>
         <div className="p-8 sm:p-10 lg:p-12 max-w-6xl mx-auto w-full">
           {/* --- SETTINGS TAB --- */}
           {activeTab === "settings" && (
