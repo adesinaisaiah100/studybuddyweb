@@ -2,12 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { Titillium_Web, Outfit } from "next/font/google";
-
-const titillium = Titillium_Web({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
-});
+import { Outfit } from "next/font/google";
+import BrandWordmark from "./BrandWordmark";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -26,9 +22,9 @@ export default function Footer() {
           {/* Brand & Copyright */}
           <div className="flex flex-col items-center md:items-start text-center md:text-left">
             <Link href="/" className="inline-block mb-4">
-              <span className={`text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-500 tracking-tight ${titillium.className}`}>
-                Study Zone
-              </span>
+              <BrandWordmark
+                className="text-2xl bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-emerald-500"
+              />
             </Link>
             <p className={`text-gray-500 text-sm max-w-xs ${outfit.className}`}>
               The intelligent study platform designed to help students organize materials, track progress, and build better study habits.
@@ -52,7 +48,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className={`text-sm text-gray-400 ${outfit.className}`}>
-            © {currentYear} Study Zone. All rights reserved.
+            © {currentYear} LEARNIVERSE. All rights reserved.
           </p>
           <div className="flex gap-4">
                {/* Decorative dots to balance the bottom right */}
@@ -66,3 +62,5 @@ export default function Footer() {
     </footer>
   );
 }
+
+

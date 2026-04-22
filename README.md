@@ -1,6 +1,6 @@
-# Study Zone Web 📚
+# LEARNIVERSE 📚
 
-Study Zone Web is an intelligent, Next.js-powered educational assistant designed to orchestrate resources and provide enhanced web search capabilities for studying. 
+LEARNIVERSE is an intelligent, Next.js-powered educational assistant designed to orchestrate resources and provide enhanced web search capabilities for studying. 
 
 It leverages Google's Gemini models for advanced search and information retrieval, with built-in fallbacks to Tavily and Wikipedia to ensure you always get the answers you need.
 

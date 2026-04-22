@@ -73,7 +73,7 @@ export default function KeyBenefitsSection() {
         
         <div className="mb-16 md:mb-20">
           <span className={`inline-block py-1.5 px-4 rounded-full bg-green-500/10 text-green-400 font-medium text-sm mb-6 border border-green-500/20 ${outfit.className}`}>
-            Why Study Zone
+            Why LEARNIVERSE
           </span>
           <h2 className={`text-3xl sm:text-4xl md:text-5xl font-bold text-white leading-tight ${titillium.className}`}>
             Designed for <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">better grades.</span>
@@ -115,3 +115,4 @@ export default function KeyBenefitsSection() {
     </section>
   );
 }
+
