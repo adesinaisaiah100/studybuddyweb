@@ -11,7 +11,7 @@ type SearchBody = {
 
 type RetrievedChunk = {
   chunk_id: string;
-  material_id: string;
+  material_id?: string;
   content: string;
   metadata: Record<string, unknown> | null;
   score: number;
@@ -51,11 +51,20 @@ async function embedPrompt(prompt: string) {
 
 export async function POST(req: Request) {
   try {
+    const requestId = crypto.randomUUID();
     const body = (await req.json()) as SearchBody;
     const courseId = body.courseId?.trim();
     const prompt = body.prompt?.trim();
     const topK = Math.min(Math.max(body.topK ?? 6, 1), 20);
     const materialIds = Array.isArray(body.materialIds) ? body.materialIds : null;
+
+    console.log("[SearchAPI] request_received", {
+      requestId,
+      courseId,
+      topK,
+      materialIdsCount: materialIds?.length ?? 0,
+      promptLength: prompt?.length ?? 0,
+    });
 
     if (!courseId || !prompt) {
       return NextResponse.json(
@@ -71,6 +80,10 @@ export async function POST(req: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error("[SearchAPI] unauthorized", {
+        requestId,
+        authError: authError?.message,
+      });
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
@@ -82,8 +95,32 @@ export async function POST(req: Request) {
       .single();
 
     if (!ownedCourse) {
+      console.error("[SearchAPI] course_not_found_for_user", {
+        requestId,
+        courseId,
+        userId: user.id,
+      });
       return NextResponse.json({ success: false, error: "Course not found." }, { status: 404 });
     }
+
+    const [{ count: materialsCount }, { count: embeddingsCount }] = await Promise.all([
+      supabase
+        .from("course_materials")
+        .select("id", { count: "exact", head: true })
+        .eq("course_id", courseId),
+      supabase
+        .from("course_embeddings")
+        .select("id", { count: "exact", head: true })
+        .eq("course_id", courseId),
+    ]);
+
+    console.log("[SearchAPI] course_data_counts", {
+      requestId,
+      courseId,
+      userId: user.id,
+      materialsCount: materialsCount ?? 0,
+      embeddingsCount: embeddingsCount ?? 0,
+    });
 
     const { embedding, model } = await embedPrompt(prompt);
 
@@ -95,6 +132,13 @@ export async function POST(req: Request) {
     });
 
     if (error) {
+      console.error("[SearchAPI] rpc_error", {
+        requestId,
+        code: error.code,
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+      });
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
@@ -106,13 +150,22 @@ export async function POST(req: Request) {
       score: row.score,
     }));
 
+    console.log("[SearchAPI] rpc_success", {
+      requestId,
+      courseId,
+      resultsCount: results.length,
+      topScore: results[0]?.score ?? null,
+    });
+
     return NextResponse.json({
       success: true,
+      requestId,
       topK,
       queryEmbeddingModel: model,
       results,
     });
   } catch (error) {
+    console.error("[SearchAPI] unhandled_error", error);
     return NextResponse.json(
       { success: false, error: (error as Error).message || "Search failed." },
       { status: 500 }

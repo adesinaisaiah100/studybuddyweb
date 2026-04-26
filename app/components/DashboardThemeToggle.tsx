@@ -16,7 +16,7 @@ export default function DashboardThemeToggle({
 }: DashboardThemeToggleProps) {
   return (
     <div className={`inline-flex items-center gap-2 ${className}`.trim()}>
-      <span className="text-xs sm:text-sm font-medium text-gray-600">
+      <span className="hidden sm:inline text-xs sm:text-sm font-medium text-gray-600">
         {isDark ? "Dark mode" : "Light mode"}
       </span>
       <button

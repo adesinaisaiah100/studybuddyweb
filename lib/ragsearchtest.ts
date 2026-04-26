@@ -1,6 +1,6 @@
 const BASE_URL = process.env.BASE_URL ?? "http://localhost:3000";
 
-async function fetchRAGSearchResults() {
+ export async function fetchRAGSearchResults() {
 
 const response =  await fetch(`${BASE_URL}/api/search`, {
     method: 'POST',

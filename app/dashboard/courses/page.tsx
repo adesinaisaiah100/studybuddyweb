@@ -218,25 +218,25 @@ export default function DashboardCoursesPage() {
   const firstName = profile?.full_name?.split(" ")[0] || "Student";
 
   return (
-    <div className={`min-h-screen px-4 sm:px-6 py-6 sm:py-10 ${isDark ? "bg-slate-900" : "bg-white"} ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
-      <div className="w-full px-5 mx-auto">
-        <div className="flex items-center justify-between mb-10 sm:mb-12">
-          <div className="flex items-center gap-3">
+    <div className={`min-h-screen px-3 sm:px-6 py-6 sm:py-10 ${isDark ? "bg-slate-900" : "bg-white"} ${isDark ? "dashboard-theme-dark" : "dashboard-theme-light"} dashboard-theme-shell`}>
+      <div className="w-full px-1 sm:px-5 mx-auto">
+        <div className="flex items-center justify-between gap-2 mb-8 sm:mb-12">
+          <div className="flex items-center gap-2 min-w-0">
             <Image
               src={isDark ? "/Logo%20Dark%20Mode.png" : "/Logo1.png"}
               alt="LEARNIVERSE Logo"
               width={40}
               height={40}
-              className="object-contain"
+              className="h-8 w-8 sm:h-10 sm:w-10 object-contain shrink-0"
               priority
             />
-            <BrandWordmark className="text-xl text-gray-900" />
+            <BrandWordmark className="text-sm sm:text-xl text-gray-900 truncate" />
           </div>
-          <div className="flex items-center gap-3">
-            <DashboardThemeToggle isDark={isDark} onToggle={toggleTheme} />
+          <div className="flex items-center gap-2 shrink-0">
+            <DashboardThemeToggle isDark={isDark} onToggle={toggleTheme} className="scale-90 sm:scale-100 origin-right" />
             <button
               onClick={handleSignOut}
-              className={`flex items-center gap-2 text-sm text-gray-400 hover:text-gray-900 transition-colors ${outfit.className}`}
+              className={`inline-flex items-center justify-center rounded-full p-2 text-sm text-gray-400 hover:bg-gray-100 hover:text-gray-900 transition-colors ${outfit.className}`}
             >
               <LogOut className="w-4 h-4" />
               <span className="hidden sm:inline">Sign out</span>
@@ -262,7 +262,7 @@ export default function DashboardCoursesPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {courses.map((course, index) => {
             const colors = CARD_COLORS[index % CARD_COLORS.length];
 
@@ -270,18 +270,18 @@ export default function DashboardCoursesPage() {
               <div
                 key={course.id}
                 onClick={() => router.push(`/dashboard/course/${course.id}`)}
-                className={`group relative ${isDark ? colors.darkBg : colors.bg} ${isDark ? colors.darkBorder : colors.border} border rounded-2xl sm:rounded-3xl p-5 sm:p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300`}
+                className={`group relative ${isDark ? colors.darkBg : colors.bg} ${isDark ? colors.darkBorder : colors.border} border rounded-xl sm:rounded-3xl p-3 sm:p-6 cursor-pointer hover:shadow-lg hover:-translate-y-1 transition-all duration-300 min-h-[10.5rem] sm:min-h-0`}
               >
-                <div className={`w-3 h-3 rounded-full ${isDark ? colors.darkDot : colors.dot} mb-4`} />
+                <div className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${isDark ? colors.darkDot : colors.dot} mb-3 sm:mb-4`} />
 
-                <p className={`text-sm font-semibold ${isDark ? colors.darkAccent : colors.accent} mb-1 tracking-wide uppercase`}>
+                <p className={`text-xs sm:text-sm font-semibold ${isDark ? colors.darkAccent : colors.accent} mb-1 tracking-wide uppercase`}>
                   {course.code}
                 </p>
 
-                <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 leading-snug">{course.title}</h3>
+                <h3 className="text-sm sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 leading-snug line-clamp-2">{course.title}</h3>
 
                 {course.course_schedules && course.course_schedules.length > 0 && (
-                  <div className="space-y-2">
+                  <div className="hidden sm:block space-y-2">
                     {course.course_schedules
                       .slice(0, 3)
                       .map((slot: { id: string; day: string; time_slot: string; venue: string | null }) => (
@@ -313,12 +313,12 @@ export default function DashboardCoursesPage() {
 
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="group border-2 border-dashed border-gray-200 rounded-2xl sm:rounded-3xl p-5 sm:p-6 flex flex-col items-center justify-center gap-3 hover:border-green-300 hover:bg-green-50/30 transition-all duration-200 min-h-50 cursor-pointer"
+            className="group border-2 border-dashed border-gray-200 rounded-xl sm:rounded-3xl p-3 sm:p-6 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-green-300 hover:bg-green-50/30 transition-all duration-200 min-h-[10.5rem] sm:min-h-50 cursor-pointer"
           >
-            <div className="w-12 h-12 rounded-2xl bg-gray-100 group-hover:bg-green-100 flex items-center justify-center transition-colors duration-200">
-              <Plus className="w-6 h-6 text-gray-400 group-hover:text-green-600 transition-colors duration-200" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gray-100 group-hover:bg-green-100 flex items-center justify-center transition-colors duration-200">
+              <Plus className="w-5 h-5 sm:w-6 sm:h-6 text-gray-400 group-hover:text-green-600 transition-colors duration-200" />
             </div>
-            <p className={`text-sm font-medium text-gray-400 group-hover:text-green-600 transition-colors duration-200 ${outfit.className}`}>
+            <p className={`text-xs sm:text-sm font-medium text-center text-gray-400 group-hover:text-green-600 transition-colors duration-200 ${outfit.className}`}>
               Add a Course
             </p>
           </button>
