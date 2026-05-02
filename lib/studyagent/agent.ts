@@ -8,6 +8,7 @@ import {
 } from "@mariozechner/pi-agent-core";
 import { fetchRAGSearchResults } from "./ragSearchTool";
 
+
 const RagSearchSchema = Type.Object({
   query: Type.String({
     description:
@@ -99,6 +100,12 @@ const createRagSearchTool = (options: StudyBuddyAgentOptions): AgentTool<
     }
   },
 });
+
+
+//TOOL 2 search stimulation tool - this tools query the database to search if stimualtion for a particular query exist
+
+
+
 
 export async function StudyBuddyAgent(
   prompt: string,
