@@ -7,6 +7,7 @@ import {
   AgentToolResult,
 } from "@mariozechner/pi-agent-core";
 import { fetchRAGSearchResults } from "./ragSearchTool";
+import { resolveStimulationViaApi } from "./stimulationResolveApiTool";
 
 
 const RagSearchSchema = Type.Object({
@@ -18,6 +19,29 @@ const RagSearchSchema = Type.Object({
 
 type RagSearchDetails = {
   queryUsed?: string;
+};
+
+const ResolveStimulationSchema = Type.Object({
+  contextSnippet: Type.String({
+    description:
+      "A compact context summary describing what the user wants to simulate.",
+  }),
+  targetVariables: Type.Array(Type.String(), {
+    minItems: 1,
+    description:
+      "List of variables that define the simulation signature to look up (for example: RPM, viscosity, temperature).",
+  }),
+  conceptName: Type.Optional(
+    Type.String({
+      description:
+        "Optional concept/domain name to narrow matching (for example: bernoulli principle).",
+    }),
+  ),
+});
+
+type ResolveStimulationDetails = {
+  success?: boolean;
+  source?: "lookup" | "generated" | null;
 };
 
 type StudyBuddyAgentOptions = {
@@ -101,6 +125,76 @@ const createRagSearchTool = (options: StudyBuddyAgentOptions): AgentTool<
   },
 });
 
+const createResolveStimulationTool = (
+  options: StudyBuddyAgentOptions,
+): AgentTool<typeof ResolveStimulationSchema, ResolveStimulationDetails> => ({
+  name: "resolve_stimulation_module",
+  label: "Resolve Stimulation Module",
+  description:
+    "Resolves a stimulation module by trying lookup first, then generation if lookup misses.",
+  parameters: ResolveStimulationSchema,
+  execute: async (
+    toolCallId: string,
+    params: Static<typeof ResolveStimulationSchema>,
+    signal: AbortSignal | undefined,
+    onUpdate: AgentToolUpdateCallback | undefined,
+  ): Promise<AgentToolResult<ResolveStimulationDetails>> => {
+    try {
+      onUpdate?.({
+        content: [{ type: "text", text: "Resolving stimulation module..." }],
+        details: {},
+      });
+
+      const result = await resolveStimulationViaApi(
+        {
+          contextSnippet: params.contextSnippet,
+          targetVariables: params.targetVariables,
+          conceptName: params.conceptName,
+        },
+        options.cookieHeader,
+      );
+
+      if (!result.success) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Stimulation module resolution failed.",
+            },
+          ],
+          details: {
+            success: false,
+            source: result.source,
+          },
+        };
+      }
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Stimulation module resolved successfully.",
+          },
+        ],
+        details: {
+          success: true,
+          source: result.source,
+        },
+      };
+    } catch (error) {
+      console.error("[ToolError] resolve_stimulation_module failed", {
+        toolCallId,
+        params,
+        error: formatError(error),
+      });
+
+      throw new Error(
+        `Failed to resolve stimulation module: ${(error as Error).message}`,
+      );
+    }
+  },
+});
+
 
 //TOOL 2 search stimulation tool - this tools query the database to search if stimualtion for a particular query exist
 
@@ -112,11 +206,12 @@ export async function StudyBuddyAgent(
   options: StudyBuddyAgentOptions,
 ) {
   const ragSearchTool = createRagSearchTool(options);
+  const resolveStimulationTool = createResolveStimulationTool(options);
 
   const studyAgent = new Agent({
     initialState: {
       model: getModel("google", "gemini-2.5-flash-lite"),
-      tools: [ragSearchTool],
+      tools: [ragSearchTool, resolveStimulationTool],
       systemPrompt: `You are 'Study Buddy,' an expert AI academic tutor for university students.
 
 Identity:
@@ -129,6 +224,7 @@ Your primary goal is to help students learn complex topics faster, easier, and w
 ------------------------------------------------------------
 
 You have access to a tool called "search_course_materials".
+You also have access to a tool called "resolve_stimulation_module".
 
 You MUST follow these rules strictly:
 
@@ -138,7 +234,7 @@ You MUST follow these rules strictly:
 
 2. Your answer MUST be grounded in the retrieved results.
    - Extract, summarize, and teach from the retrieved content.
-   - Match the tone, terminology, and structure of the course materials.
+   - Don't nessasarily match the retrieved content verbatim, but ensure your explanation is based on it.
 
 3. If retrieved results are:
    - ✅ Highly relevant → Use them as your PRIMARY source.
@@ -161,6 +257,13 @@ You MUST follow these rules strictly:
    - You MAY call the tool multiple times with different queries
 
 7. Always assume the course materials contain the most accurate and preferred explanation.
+
+8. If the user asks for an interactive simulation, simulator, or dynamic visual model or you think a stimulation would help explain the concept:
+  - Call "resolve_stimulation_module" with contextSnippet + target variables inferred from the user request.
+  - If the tool returns success, continue your normal teaching response and note that the simulation module is prepared.
+  - Do NOT print or expose raw simulation code in your answer.
+9. Always include examples to help students understand better, and ensure examples are relevant to the discussion.
+10. Include Analogies you think a student would relate to
 
 ------------------------------------------------------------
 ## 🧩 RESPONSE GROUNDING RULE
@@ -208,12 +311,12 @@ Format your response using clean Markdown:
 - Use simple explanations and relatable analogies (preferably Nigerian context)
 
 ### 3. Formulas & Equations (if applicable)
-- Place EACH formula on a NEW LINE using LaTeX display mode
+- Place EACH formula on a NEW LINE 
 
-Example:
-$$
+Example(at least 2 examples of question and solution or answer):
+
 E = mc^2
-$$
+
 
 - NEVER put formulas inline with text
 
@@ -231,20 +334,6 @@ Step 3: Calculation
 Step 4: Answer  
 - Final answer with correct units
 
-### 5. Visual Aid (YouTube)
-
-- ALWAYS search for a relevant YouTube video
-- ONLY include videos that are:
-  - Available (not broken/private)
-  - Relevant to the exact concept
-
-For each video:
-- Provide the link
-- Add a 1-line explanation of why it helps
-
-If no valid video is found:
-- Skip it and explain the concept more clearly instead
-
 ### 6. Conceptual Visualization (if needed)
 
 Use simple structured steps like:
@@ -259,6 +348,10 @@ Process Flow:
 
 ### 8. Summary for Notes
 - 2–3 concise sentences for revision
+
+
+### 9. Tips for exams(when necessary)
+- Bullet point tips on how to approach questions on this topic in exams
 
 ------------------------------------------------------------
 ## 🎯 ADAPTATION RULES
@@ -298,14 +391,10 @@ Always prioritize:
 ------------------------------------------------------------
 ## 🧮 MATH RULE
 ------------------------------------------------------------
+- For math-related questions, ALWAYS provide a step-by-step solution with clear explanations for each step.
+- NEVER just provide the final answer without showing the work.
 
-All major formulas MUST be written using LaTeX display mode:
-
-$$
-formula here
-$$
-
-Inline LaTeX ($x$) is ONLY for variables within sentences.
+-Always format formulas using LaTeX and place them on separate lines for clarity.
 
 ------------------------------------------------------------
 ## 🎓 FINAL GOAL

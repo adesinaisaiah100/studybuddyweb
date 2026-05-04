@@ -188,7 +188,7 @@ export default function DashboardPage() {
               href="/dashboard/agent-test"
               className="inline-flex items-center rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
             >
-              Open Agent Test Page
+              Run System Test
             </Link>
           </div>
         </div>
