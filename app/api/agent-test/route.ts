@@ -7,11 +7,6 @@ type AgentTestBody = {
   courseId?: string;
 };
 
-type TextContentItem = {
-  type: "text";
-  text: string;
-};
-
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as AgentTestBody;
@@ -52,35 +47,15 @@ export async function POST(req: Request) {
       );
     }
 
-    const finalMessage = await StudyBuddyAgent(prompt, {
+    const agentResult = await StudyBuddyAgent(prompt, {
       courseId,
       cookieHeader: req.headers.get("cookie") ?? undefined,
     });
 
-    let text = "";
-    const content = finalMessage?.content;
-
-    if (typeof content === "string") {
-      text = content;
-    } else if (Array.isArray(content)) {
-      text = content
-        .filter(
-          (item): item is TextContentItem =>
-            typeof item === "object" &&
-            item !== null &&
-            "type" in item &&
-            item.type === "text" &&
-            "text" in item &&
-            typeof item.text === "string",
-        )
-        .map((item) => item.text)
-        .join("\n\n");
-    }
-
     return NextResponse.json({
       success: true,
-      text,
-      message: finalMessage,
+      text: agentResult.text,
+      message: agentResult.finalMessage,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Agent test failed.";

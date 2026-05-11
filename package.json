@@ -24,6 +24,7 @@
     "@streamdown/mermaid": "^1.0.2",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.105.1",
+    "ai": "^6.0.176",
     "clsx": "^2.1.1",
     "framer-motion": "^12.36.0",
     "katex": "^0.16.42",
