@@ -65,24 +65,24 @@ body {
 }
 
 .dashboard-theme-dark {
-  background-color: #0f172a;
+  background-color: #020617;
   color: #e2e8f0;
 }
 
 .dashboard-theme-dark .bg-white {
-  background-color: #0f172a !important;
+  background-color: #020617 !important;
 }
 
 .dashboard-theme-dark .bg-gray-50 {
-  background-color: #111827 !important;
+  background-color: #0f172a !important;
 }
 
 .dashboard-theme-dark .bg-gray-100 {
-  background-color: #1f2937 !important;
+  background-color: #1e293b !important;
 }
 
 .dashboard-theme-dark .bg-white\/80 {
-  background-color: rgba(15, 23, 42, 0.85) !important;
+  background-color: rgba(2, 6, 23, 0.88) !important;
 }
 
 .dashboard-theme-dark .text-gray-900 {

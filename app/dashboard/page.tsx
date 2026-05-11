@@ -102,7 +102,7 @@ export default function DashboardPage() {
       subtitle: "Assistant",
       description: "Chat with your AI Study Pal.",
       icon: MessageSquareText,
-      onClick: () => {},
+      onClick: () => router.push("/dashboard/study-pal"),
       style: "bg-blue-50 border-blue-200 text-blue-700",
       darkStyle: "bg-blue-950/50 border-blue-800 text-blue-300",
       titleClassName: "study-pal-wordmark",
@@ -196,7 +196,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
           {cards.map((card) => {
             const Icon = card.icon;
-            const isSoon = card.key !== "courses";
+            const isSoon = !["courses", "study-buddy"].includes(card.key);
 
             return (
               <button
